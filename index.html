@@ -1,0 +1,2364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>KLG Group · Primary Sales Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#f0f2f5;--accent:#1a56db;--a2:#7e3af2;--a3:#0ea5e9;--green:#059669;
+  --red:#dc2626;--amber:#d97706;--text:#111827;--muted:#6b7280;
+  --border:#e5e7eb;--card:#fff;--shadow:0 1px 4px rgba(0,0,0,.08);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--text);font-size:13px}
+
+/* ── HEADER ── */
+.hdr{background:linear-gradient(135deg,#1a56db 0%,#7e3af2 100%);color:#fff;
+  padding:14px 28px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.hdr-left h1{font-size:18px;font-weight:700;letter-spacing:-.3px}
+.hdr-left p{font-size:11px;opacity:.8;margin-top:2px}
+.hdr-right{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.badge{background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.3);
+  border-radius:20px;padding:3px 11px;font-size:11px;font-weight:600}
+.exp-btn{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.4);
+  border-radius:7px;color:#fff;padding:5px 13px;font-size:11px;font-weight:700;
+  cursor:pointer;transition:background .15s}
+.exp-btn:hover{background:rgba(255,255,255,.3)}
+
+/* ── FILTERS ── */
+.filters{background:#fff;padding:10px 28px;display:flex;gap:10px;align-items:center;
+  flex-wrap:wrap;border-bottom:1px solid var(--border);box-shadow:var(--shadow)}
+.flabel{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;
+  letter-spacing:.6px;white-space:nowrap;min-width:52px}
+.fgroup{display:flex;gap:4px;flex-wrap:wrap}
+.fbtn{padding:3px 11px;border-radius:20px;border:1.5px solid var(--border);
+  background:#fff;font-size:11px;font-weight:600;cursor:pointer;color:var(--muted);transition:all .12s}
+.fbtn:hover{border-color:var(--accent);color:var(--accent)}
+.fbtn.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.fsep{width:1px;height:20px;background:var(--border);flex-shrink:0}
+.filter-hint{font-size:10px;color:var(--muted);font-style:italic;margin-left:4px}
+
+/* ── TABS ── */
+.tabs{background:#fff;border-bottom:2px solid var(--border);padding:0 28px;
+  display:flex;gap:0;overflow-x:auto}
+.tab-btn{padding:10px 18px;font-size:12px;font-weight:700;color:var(--muted);
+  border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;
+  margin-bottom:-2px;white-space:nowrap;transition:all .15s}
+.tab-btn:hover{color:var(--accent)}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab-pane{display:none}
+.tab-pane.active{display:block}
+
+/* ── MAIN ── */
+.main{padding:18px 28px;display:flex;flex-direction:column;gap:14px}
+
+/* ── KPI CARDS ── */
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+.kpi{background:var(--card);border-radius:10px;padding:15px 18px;box-shadow:var(--shadow);
+  border:1px solid var(--border);position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:10px 10px 0 0}
+.kpi.c1::before{background:var(--accent)}.kpi.c2::before{background:var(--a2)}
+.kpi.c3::before{background:var(--a3)}.kpi.c4::before{background:var(--green)}
+.kpi.c5::before{background:var(--amber)}
+.kpi-lbl{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.kpi-val{font-size:22px;font-weight:800;margin:4px 0 2px;letter-spacing:-1px}
+.kpi.c1 .kpi-val{color:var(--accent)}.kpi.c2 .kpi-val{color:var(--a2)}
+.kpi.c3 .kpi-val{color:var(--a3)}.kpi.c4 .kpi-val{color:var(--green)}
+.kpi.c5 .kpi-val{color:var(--amber)}
+.kpi-sub{font-size:10px;color:var(--muted)}
+.kpi-growth{font-size:11px;font-weight:700;margin-top:3px}
+.kpi-growth.up{color:var(--green)}.kpi-growth.dn{color:var(--red)}.kpi-growth.flat{color:var(--muted)}
+
+/* ── CARDS & ROWS ── */
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.row65{display:grid;grid-template-columns:3fr 2fr;gap:14px}
+.row56{display:grid;grid-template-columns:5fr 4fr;gap:14px}
+.card{background:var(--card);border-radius:10px;padding:16px 20px;
+  box-shadow:var(--shadow);border:1px solid var(--border)}
+.ctitle{font-size:13px;font-weight:700;margin-bottom:1px}
+.csub{font-size:10px;color:var(--muted);margin-bottom:12px}
+.chart-wrap{position:relative}
+
+/* ── TOGGLE PILL ── */
+.toggle-pill{display:inline-flex;background:#f3f4f6;border-radius:20px;padding:2px}
+.tpill-btn{padding:3px 12px;border-radius:18px;border:none;background:none;
+  font-size:11px;font-weight:600;color:var(--muted);cursor:pointer;transition:all .12s}
+.tpill-btn.on{background:#fff;color:var(--accent);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+
+/* ── TABLES ── */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:11px}
+th{background:#f9fafb;font-weight:700;color:var(--muted);text-transform:uppercase;
+  font-size:10px;letter-spacing:.4px;padding:8px 10px;border-bottom:1px solid var(--border);
+  text-align:left;white-space:nowrap}
+td{padding:7px 10px;border-bottom:1px solid #f3f4f6;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#f9fafb}
+.mbar{height:5px;border-radius:3px;display:inline-block;vertical-align:middle}
+
+/* ── BADGES / PILLS ── */
+.pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700}
+.pill-green{background:#d1fae5;color:#065f46}
+.pill-red{background:#fee2e2;color:#991b1b}
+.pill-amber{background:#fef3c7;color:#92400e}
+.pill-blue{background:#dbeafe;color:#1e40af}
+.pill-gray{background:#f3f4f6;color:#374151}
+
+/* ── TREND ARROWS ── */
+.trend-up{color:var(--green);font-weight:700}
+.trend-dn{color:var(--red);font-weight:700}
+.trend-flat{color:var(--muted);font-weight:700}
+
+/* ── SORTABLE HEADERS ── */
+.sort-th{cursor:pointer;user-select:none;white-space:nowrap}
+.sort-th:hover{background:#f0f4ff;color:var(--accent)}
+.sort-th.sort-active{color:var(--accent);background:#f0f4ff}
+.sort-th span{font-size:9px;margin-left:3px;opacity:.7}
+
+/* ── HEATMAP ── */
+.heatmap-wrap{overflow-x:auto}
+.heatmap{border-collapse:collapse;font-size:11px;width:100%}
+.heatmap th{background:#f9fafb;padding:7px 10px;border:1px solid var(--border);
+  font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;white-space:nowrap}
+.heatmap td{padding:6px 10px;border:1px solid var(--border);text-align:right;
+  font-weight:600;font-size:11px;cursor:default;transition:opacity .1s;white-space:nowrap}
+.heatmap td:first-child{text-align:left;font-weight:700;color:var(--text);background:#f9fafb}
+.heatmap td:hover{opacity:.85}
+
+/* ── GEOGRAPHY ── */
+.geo-legend{display:flex;gap:6px;align-items:center;margin-top:6px;font-size:10px;color:var(--muted)}
+.legend-bar{height:8px;width:80px;border-radius:4px;
+  background:linear-gradient(to right,#dbeafe,#1a56db)}
+
+/* ── FOOTER ── */
+.footer{text-align:center;padding:12px;font-size:10px;color:var(--muted);
+  border-top:1px solid var(--border);background:#fff;margin-top:8px}
+
+/* ── MODAL ── */
+#modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;
+  background:rgba(0,0,0,.55);z-index:9999;overflow-y:auto;padding:20px 16px}
+#modal-box{background:#fff;border-radius:14px;max-width:920px;margin:auto;
+  padding:28px 30px;position:relative;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.modal-close{position:absolute;top:14px;right:16px;border:none;background:none;
+  font-size:26px;cursor:pointer;color:#9ca3af;line-height:1}
+.modal-close:hover{color:#374151}
+.modal-hdr{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:18px}
+.modal-name{font-size:20px;font-weight:800;color:var(--text)}
+.desig-badge{padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;
+  background:var(--accent);color:#fff}
+.modal-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
+.mkpi{background:#f9fafb;border-radius:8px;padding:12px 14px;text-align:center}
+.mkpi-lbl{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase}
+.mkpi-val{font-size:18px;font-weight:800;color:var(--accent);margin:3px 0}
+.mkpi-sub{font-size:10px;color:var(--muted)}
+.modal-section-title{font-size:13px;font-weight:700;color:var(--text);
+  margin:18px 0 8px;padding-bottom:4px;border-bottom:2px solid var(--border)}
+
+/* ── TARGET PROGRESS ── */
+.tgt-bar-wrap{background:#f3f4f6;border-radius:4px;height:6px;width:100%;overflow:hidden}
+.tgt-bar{height:6px;border-radius:4px;transition:width .3s}
+.tgt-bar.over{background:var(--green)}.tgt-bar.near{background:var(--amber)}
+.tgt-bar.low{background:var(--red)}
+
+/* ── MANPOWER CARDS ── */
+.mp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.mp-card{background:var(--card);border-radius:10px;padding:14px 16px;
+  box-shadow:var(--shadow);border:1px solid var(--border);cursor:pointer;
+  border-left:4px solid var(--accent);transition:box-shadow .15s,transform .1s}
+.mp-card:hover{box-shadow:0 4px 16px rgba(26,86,219,.18);transform:translateY(-1px)}
+.mp-card-name{font-size:13px;font-weight:700;color:var(--text)}
+.mp-card-meta{font-size:10px;color:var(--muted);margin:2px 0 8px}
+.mp-progress{margin-top:6px}
+.mp-pct{font-size:12px;font-weight:700;margin-bottom:3px}
+
+/* ── ZONE DEEP-DIVE ── */
+.zone-back-btn{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;
+  border:1.5px solid var(--border);border-radius:20px;background:#fff;
+  font-size:12px;font-weight:700;cursor:pointer;color:var(--accent);margin-bottom:14px}
+.zone-back-btn:hover{background:#f0f4ff}
+
+/* ── PRINT ── */
+@media print{
+  .filters,.tabs,.hdr-right,.exp-btn{display:none!important}
+  .tab-pane{display:block!important}
+  .card,.kpi{break-inside:avoid;box-shadow:none;border:1px solid #ddd}
+  body{background:#fff}
+}
+
+@media(max-width:900px){
+  .kpis{grid-template-columns:repeat(2,1fr)}
+  .row2,.row65,.row56{grid-template-columns:1fr}
+  .main,.filters,.hdr{padding:12px 14px}
+  .tabs{padding:0 14px}
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="hdr">
+  <div class="hdr-left">
+    <h1>&#128230; KLG Group &mdash; Primary Sales Dashboard</h1>
+    <p id="hdr-sub">Loading&hellip;</p>
+  </div>
+  <div class="hdr-right">
+    <div id="hdr-badges"></div>
+    <button class="exp-btn" onclick="exportExcel()">&#128202; Export Excel</button>
+    <button class="exp-btn" onclick="window.print()">&#128196; Export PDF</button>
+  </div>
+</div>
+
+<!-- FILTERS -->
+<div class="filters">
+  <span class="flabel">Region</span>
+  <div class="fgroup" id="fg-region"></div>
+  <div class="fsep"></div>
+  <span class="flabel">Division</span>
+  <div class="fgroup" id="fg-division"></div>
+  <div class="fsep"></div>
+  <span class="flabel">Month</span>
+  <div class="fgroup" id="fg-month"></div>
+  <span class="filter-hint">&#9432; Click multiple to combine</span>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('overview',this)">&#128202; Overview</button>
+  <button class="tab-btn" onclick="switchTab('products',this)">&#128230; Products</button>
+  <button class="tab-btn" onclick="switchTab('distributors',this)">&#127978; Distributors</button>
+  <button class="tab-btn" id="tab-btn-manpower" onclick="switchTab('manpower',this)">&#128101; Manpower</button>
+  <button class="tab-btn" id="tab-btn-targets" onclick="switchTab('targets',this)">&#127919; Targets</button>
+  <button class="tab-btn" onclick="switchTab('zones',this)">&#127970; Zones</button>
+  <button class="tab-btn" onclick="switchTab('geography',this)">&#127758; Geography</button>
+  <button class="tab-btn" onclick="switchTab('seasonality',this)">&#128197; Seasonality</button>
+</div>
+
+<!-- ═══════════════ TAB: OVERVIEW ═══════════════ -->
+<div id="tab-overview" class="tab-pane active">
+<div class="main">
+  <div class="kpis">
+    <div class="kpi c1">
+      <div class="kpi-lbl">Total Revenue</div>
+      <div class="kpi-val" id="k-rev">—</div>
+      <div class="kpi-sub">&#8377; Lakhs</div>
+      <div class="kpi-growth" id="k-rev-mom"></div>
+    </div>
+    <div class="kpi c2">
+      <div class="kpi-lbl">Total Quantity</div>
+      <div class="kpi-val" id="k-qty">—</div>
+      <div class="kpi-sub">Units Dispatched</div>
+    </div>
+    <div class="kpi c3">
+      <div class="kpi-lbl">Invoices</div>
+      <div class="kpi-val" id="k-inv">—</div>
+      <div class="kpi-sub">Unique Invoices</div>
+    </div>
+    <div class="kpi c4">
+      <div class="kpi-lbl">Distributors</div>
+      <div class="kpi-val" id="k-dist">—</div>
+      <div class="kpi-sub">In Selection</div>
+    </div>
+    <div class="kpi c5">
+      <div class="kpi-lbl">Active Distributors</div>
+      <div class="kpi-val" id="k-active">—</div>
+      <div class="kpi-sub">Billed in Last 3 Months</div>
+    </div>
+  </div>
+
+  <div class="row65">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+        <div>
+          <div class="ctitle">Monthly Revenue Trend</div>
+          <div class="csub">&#8377; Lakhs — updates with every filter</div>
+        </div>
+        <div class="toggle-pill">
+          <button class="tpill-btn on" id="tp-monthly" onclick="setChartMode('monthly')">Monthly</button>
+          <button class="tpill-btn" id="tp-cumulative" onclick="setChartMode('cumulative')">Cumulative</button>
+        </div>
+      </div>
+      <div class="chart-wrap" style="height:220px"><canvas id="ch-monthly"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="ctitle">Revenue by Division</div>
+      <div class="csub">Contribution breakdown</div>
+      <div class="chart-wrap" style="height:220px"><canvas id="ch-division"></canvas></div>
+    </div>
+  </div>
+
+  <div class="row56">
+    <div class="card">
+      <div class="ctitle">Monthly Mix by Category</div>
+      <div class="csub">Stacked &#8377; Lakhs — updates with filters</div>
+      <div class="chart-wrap" style="height:240px"><canvas id="ch-stacked"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="ctitle">Revenue by Category</div>
+      <div class="csub">Share across filtered selection</div>
+      <div class="chart-wrap" style="height:240px"><canvas id="ch-category"></canvas></div>
+    </div>
+  </div>
+
+  <div class="row2">
+    <div class="card">
+      <div class="ctitle">Revenue by State</div>
+      <div class="csub">&#8377; Lakhs per state</div>
+      <div class="chart-wrap" style="height:200px"><canvas id="ch-state"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="ctitle">Revenue by Zone</div>
+      <div class="csub">&#8377; Lakhs per zone</div>
+      <div class="chart-wrap" style="height:200px"><canvas id="ch-zone"></canvas></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ctitle">Top Distributors by Revenue</div>
+    <div class="csub">Updates with every filter — showing invoices raised per distributor</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th>#</th><th>Distributor / Place</th>
+          <th>&#8377; Lakhs</th><th>Invoices</th><th>% of Selection</th><th>Visual</th>
+        </tr></thead>
+        <tbody id="dist-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════════ TAB: PRODUCTS ═══════════════ -->
+<div id="tab-products" class="tab-pane">
+<div class="main">
+  <div class="row2">
+    <div class="card">
+      <div class="ctitle" id="sku-chart-title">Revenue by SKU / Product</div>
+      <div class="csub">Top items in current selection</div>
+      <div class="chart-wrap" style="height:320px"><canvas id="ch-sku"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="ctitle">Revenue by Category</div>
+      <div class="csub">Category contribution in selection</div>
+      <div class="chart-wrap" style="height:320px"><canvas id="ch-cat2"></canvas></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="ctitle" id="sku-table-title">Top Products — Ranked</div>
+    <div class="csub">Sorted by revenue in current selection</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>#</th><th>Product / SKU</th><th>&#8377; Lakhs</th><th>% Share</th><th>Visual</th></tr></thead>
+        <tbody id="sku-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════════ TAB: DISTRIBUTORS ═══════════════ -->
+<div id="tab-distributors" class="tab-pane">
+<div class="main">
+  <div class="kpis" style="grid-template-columns:repeat(3,1fr)">
+    <div class="kpi c4">
+      <div class="kpi-lbl">Active Distributors</div>
+      <div class="kpi-val" id="dh-active">—</div>
+      <div class="kpi-sub">Billed in last 3 months</div>
+    </div>
+    <div class="kpi c5">
+      <div class="kpi-lbl">Inactive Distributors</div>
+      <div class="kpi-val" id="dh-inactive">—</div>
+      <div class="kpi-sub">Not billed in last 3 months</div>
+    </div>
+    <div class="kpi c3">
+      <div class="kpi-lbl">Total Distributors</div>
+      <div class="kpi-val" id="dh-total">—</div>
+      <div class="kpi-sub">In current region/division</div>
+    </div>
+  </div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div>
+        <div class="ctitle">Distributor Health Scorecard</div>
+        <div class="csub">Trend based on last 3 months · Month filter ignored for health view</div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button class="tpill-btn on" id="dh-all-btn" style="border:1.5px solid var(--border);border-radius:20px;padding:3px 12px"
+          onclick="setHealthFilter('all')">All</button>
+        <button class="tpill-btn" id="dh-active-btn" style="border:1.5px solid var(--border);border-radius:20px;padding:3px 12px"
+          onclick="setHealthFilter('active')">Active Only</button>
+        <button class="tpill-btn" id="dh-inactive-btn" style="border:1.5px solid var(--border);border-radius:20px;padding:3px 12px"
+          onclick="setHealthFilter('inactive')">Inactive Only</button>
+      </div>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr id="health-thead">
+          <th style="cursor:default">#</th>
+          <th class="sort-th" data-scol="name"      onclick="sortHealthBy('name')">Distributor / Place <span id="si-name"></span></th>
+          <th class="sort-th" data-scol="status"    onclick="sortHealthBy('status')">Status <span id="si-status"></span></th>
+          <th class="sort-th" data-scol="trend"     onclick="sortHealthBy('trend')">Trend <span id="si-trend"></span></th>
+          <th class="sort-th" data-scol="lastMonth" onclick="sortHealthBy('lastMonth')">Last Billed <span id="si-lastMonth"></span></th>
+          <th class="sort-th" data-scol="rev"       onclick="sortHealthBy('rev')">&#8377; Lakhs <span id="si-rev">&#9660;</span></th>
+          <th class="sort-th" data-scol="inv"       onclick="sortHealthBy('inv')">Invoices <span id="si-inv"></span></th>
+          <th style="cursor:default">Recent 3 Months</th>
+        </tr></thead>
+        <tbody id="health-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="card" id="multi-div-card" style="display:none">
+    <div class="ctitle">&#9888; Distributors Mapped to Multiple Divisions</div>
+    <div class="csub">These distributors transact across 2 or more divisions — verify billing accuracy</div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>#</th><th>Distributor</th><th>Divisions</th>
+        <th>Revenue per Division (₹ L)</th><th>Total ₹ L</th></tr></thead>
+      <tbody id="multi-div-tbody"></tbody>
+    </table></div>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════════ TAB: MANPOWER ═══════════════ -->
+<div id="tab-manpower" class="tab-pane">
+<div class="main">
+  <div class="kpis" style="grid-template-columns:repeat(4,1fr)" id="mp-kpi-row">
+    <div class="kpi c1"><div class="kpi-lbl">Total Headcount</div>
+      <div class="kpi-val" id="mp-k-total">—</div><div class="kpi-sub">Active employees</div></div>
+    <div class="kpi c4"><div class="kpi-lbl">Total Target</div>
+      <div class="kpi-val" id="mp-k-tgt">—</div><div class="kpi-sub">₹ Lakhs (all months)</div></div>
+    <div class="kpi c3"><div class="kpi-lbl">Total Achievement</div>
+      <div class="kpi-val" id="mp-k-ach">—</div><div class="kpi-sub">₹ Lakhs (all months)</div></div>
+    <div class="kpi c2"><div class="kpi-lbl">Avg Achievement</div>
+      <div class="kpi-val" id="mp-k-pct">—</div><div class="kpi-sub">% vs target</div></div>
+  </div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div><div class="ctitle">Team Performance Overview</div>
+        <div class="csub">Click any card to see detailed deep-dive</div></div>
+      <div class="toggle-pill">
+        <button class="tpill-btn on" id="mp-view-cards" onclick="setMpView('cards')">Cards</button>
+        <button class="tpill-btn" id="mp-view-table" onclick="setMpView('table')">Table</button>
+      </div>
+    </div>
+    <div id="mp-cards-view"><div class="mp-grid" id="mp-grid"></div></div>
+    <div id="mp-table-view" style="display:none">
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>#</th><th>Name</th><th>Designation</th><th>Zone</th><th>Unit</th>
+          <th>Target ₹L</th><th>Achievement ₹L</th><th>% Achieved</th><th>Status</th></tr></thead>
+        <tbody id="mp-tbody"></tbody>
+      </table></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════════ TAB: TARGETS ═══════════════ -->
+<div id="tab-targets" class="tab-pane">
+<div class="main">
+  <div class="kpis" style="grid-template-columns:repeat(3,1fr)">
+    <div class="kpi c1"><div class="kpi-lbl">Total Target</div>
+      <div class="kpi-val" id="tgt-k-tgt">—</div><div class="kpi-sub">₹ Lakhs</div></div>
+    <div class="kpi c4"><div class="kpi-lbl">Total Achievement</div>
+      <div class="kpi-val" id="tgt-k-ach">—</div><div class="kpi-sub">₹ Lakhs</div></div>
+    <div class="kpi c3"><div class="kpi-lbl">Achievement %</div>
+      <div class="kpi-val" id="tgt-k-pct">—</div><div class="kpi-sub">Overall attainment</div></div>
+  </div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div><div class="ctitle">Target vs Achievement</div>
+        <div class="csub">Select view · Click distributor row to see SKU-level breakdown</div></div>
+      <div class="toggle-pill">
+        <button class="tpill-btn on" id="tv-dist" onclick="setTgtView('dist')">By Distributor</button>
+        <button class="tpill-btn" id="tv-person" onclick="setTgtView('person')">By Person</button>
+      </div>
+    </div>
+    <div class="tbl-wrap"><table>
+      <thead><tr id="tgt-thead"></tr></thead>
+      <tbody id="tgt-tbody"></tbody>
+    </table></div>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════════ TAB: GEOGRAPHY ═══════════════ -->
+<div id="tab-geography" class="tab-pane">
+<div class="main">
+  <div class="row2">
+    <div class="card">
+      <div class="ctitle">Revenue by State — Ranked</div>
+      <div class="csub">&#8377; Lakhs · color intensity = revenue share</div>
+      <div class="chart-wrap" style="height:400px"><canvas id="ch-geo"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="ctitle">State Revenue Table</div>
+      <div class="csub">All states in current selection</div>
+      <div class="tbl-wrap" style="max-height:400px;overflow-y:auto">
+        <table>
+          <thead><tr><th>#</th><th>State</th><th>&#8377; Lakhs</th><th>% Share</th><th>Visual</th></tr></thead>
+          <tbody id="geo-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════════ TAB: ZONES ═══════════════ -->
+<div id="tab-zones" class="tab-pane">
+
+<!-- ZONE DEEP-DIVE VIEW -->
+<div id="zone-deepdive-view" style="display:none" class="main">
+  <button class="zone-back-btn" onclick="exitZoneDeepDive()">&#8592; Back to All Zones</button>
+  <div id="zdv-content"></div>
+</div>
+
+<!-- ZONE OVERVIEW -->
+<div id="zone-overview-view">
+<div class="main">
+  <!-- Zone KPI summary row (clickable) -->
+  <div id="zone-kpi-row" style="display:grid;gap:12px"></div>
+
+  <div class="row2">
+    <div class="card">
+      <div class="ctitle">Revenue by Zone</div>
+      <div class="csub">&#8377; Lakhs — sorted highest first</div>
+      <div class="chart-wrap" style="height:260px"><canvas id="ch-zone2"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="ctitle">Monthly Trend by Zone</div>
+      <div class="csub">Stacked &#8377; Lakhs — each zone as a layer</div>
+      <div class="chart-wrap" style="height:260px"><canvas id="ch-zone-monthly"></canvas></div>
+    </div>
+  </div>
+
+  <div class="row2">
+    <div class="card">
+      <div class="ctitle">Category Mix per Zone</div>
+      <div class="csub">&#8377; Lakhs — stacked by category within each zone</div>
+      <div class="chart-wrap" style="height:280px"><canvas id="ch-zone-cat"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="ctitle">Division Mix per Zone</div>
+      <div class="csub">&#8377; Lakhs — which divisions drive each zone</div>
+      <div class="chart-wrap" style="height:280px"><canvas id="ch-zone-div"></canvas></div>
+    </div>
+  </div>
+
+  <div class="row2">
+    <div class="card">
+      <div class="ctitle">States within Zones</div>
+      <div class="csub">Top states per zone — &#8377; Lakhs</div>
+      <div class="chart-wrap" style="height:300px"><canvas id="ch-zone-state"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="ctitle">Zone Detail Table</div>
+      <div class="csub">Revenue · Invoices · % share per zone</div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th>#</th><th>Zone</th><th>&#8377; Lakhs</th>
+            <th>Invoices</th><th>% Share</th><th>Top Category</th><th>Visual</th>
+          </tr></thead>
+          <tbody id="zone-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div><!-- /main -->
+</div><!-- /zone-overview-view -->
+</div><!-- /tab-zones -->
+
+<!-- ═══════════════ TAB: SEASONALITY ═══════════════ -->
+<div id="tab-seasonality" class="tab-pane">
+<div class="main">
+  <div class="card">
+    <div class="ctitle">Seasonality — Revenue by Month &times; Region</div>
+    <div class="csub">&#8377; Lakhs · darker = higher revenue · reveals seasonal patterns</div>
+    <div class="heatmap-wrap" id="heat-region"></div>
+  </div>
+  <div class="card">
+    <div class="ctitle">Seasonality — Revenue by Month &times; Division</div>
+    <div class="csub">&#8377; Lakhs · darker = higher revenue</div>
+    <div class="heatmap-wrap" id="heat-division"></div>
+  </div>
+</div>
+</div>
+
+<!-- MODAL OVERLAY -->
+<div id="modal-overlay" onclick="closeModal(event)">
+  <div id="modal-box">
+    <button class="modal-close" onclick="closeModal(null)">&#215;</button>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<div class="footer" id="footer-txt">KLG Group &middot; Primary Sales Dashboard</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+// EMBEDDED DATA
+// ═══════════════════════════════════════════════════════════════════════════
+const D = {"months":["Oct-25","Nov-25","Dec-25","Jan-26","Feb-26","Mar-26"],"regions":["NER","WB"],"divisions":["Bev","Foods","Snacks","Water"],"categories":["Potato Chips","Water","Fryums","Namkeen","Brown Noodles","Extruded","Energy","White Noodles","Condiments","Spreads"],"lastMonths":["Jan-26","Feb-26","Mar-26"],"skuLabel":"SKU","grandTotal":1253.53,"generated":"25 Mar 2026, 16:22","atomic":{"NER":{"Bev":{"Mar-26":{"rev":30.45,"qty":321420,"inv":13,"cat":{"Energy":30.45},"state":{"ASSAM":26.12,"TRIPURA":4.33},"zone":{"GHY":4.61,"LA":4.61,"MA":4.6,"NB":12.28,"TR":4.33},"div":{"Bev":30.45},"sku":{"ARMOUR ENERGY 185ML CAN (494590228)":6.23,"CAMPA ENERGY LEMON BOOST 150ML PET (494606994)":2.45,"CAMPA ENERGY NEON BOOST 150ML PET (494607000)":6.72,"CAMPA ENERGY ORANGE BOOST 150ML PET (494606998)":3.07,"CAMPA ENERGY PURPLE BOOST 150ML PET (494606964)":2.73,"CAMPA POWER UP ENERGY 150ML PET (494607001)":2.73,"RASKIK MANGO CAN 185ML (494606982)":3.26,"RASKIK ORANGE CAN 185ML (494606983)":3.26},"dist":{"Balaji Store":{"r":4.6,"i":2,"p":"Jagiroad"},"Balaji Trading":{"r":4.61,"i":2,"p":"Guwahati"},"Choudhary Marketing Agency":{"r":4.61,"i":2,"p":"Gohpur"},"Kalita and Son Traders":{"r":4.61,"i":1,"p":"Nalbari"},"Mahadeb Bhander":{"r":4.33,"i":2,"p":"Agartala"},"RAMKUMAR CHANDRATAN":{"r":3.06,"i":2,"p":"Lakhimpur"},"S S BROTHERS STORE":{"r":4.61,"i":2,"p":"Darrang"}},"zone_cat":{"GHY":{"Energy":4.61},"LA":{"Energy":4.61},"MA":{"Energy":4.6},"NB":{"Energy":12.28},"TR":{"Energy":4.33}},"zone_state":{"GHY":{"ASSAM":4.61},"LA":{"ASSAM":4.61},"MA":{"ASSAM":4.6},"NB":{"ASSAM":12.28},"TR":{"TRIPURA":4.33}},"zone_div":{"GHY":{"Bev":4.61},"LA":{"Bev":4.61},"MA":{"Bev":4.6},"NB":{"Bev":12.28},"TR":{"Bev":4.33}},"zone_inv":{"GHY":2,"LA":1,"MA":2,"NB":6,"TR":2}}},"Foods":{"Dec-25":{"rev":13.04,"qty":333360,"inv":8,"cat":{"Brown Noodles":8.76,"White Noodles":4.28},"state":{"ASSAM":11.05,"Meghalaya":1.99},"zone":{"GHY":0.99,"HO":0.0,"LA":1.98,"MA":2.09,"ML":1.99,"UA":5.99},"div":{"Foods":13.04},"sku":{"SIL CHOW CHOW NOODLES CHKN 50G":1.71,"SIL INSTANT NOODLES MASALA 25G PP":2.4,"SIL INSTANT NOODLES MASALA 55G PP":1.88,"SNCTC MINI CHKN NDLS 25G":7.05},"dist":{"Ayush Trading":{"r":2.09,"i":1,"p":"Nagaon"},"Rubi Enterprise":{"r":1.98,"i":1,"p":"Barpeta Road"},"Sales Promotion":{"r":0.0,"i":2,"p":"Guwahati"},"Shubham Enterprise":{"r":1.99,"i":1,"p":"Shillong (Garikhana)"},"Sri B.R. Agencies":{"r":0.99,"i":1,"p":"Guwahati"},"Swastik Trade & Agencies":{"r":3.25,"i":1,"p":"Jorhat"},"Tullah Enterprise":{"r":2.74,"i":1,"p":"Margherita"}},"zone_cat":{"GHY":{"Brown Noodles":0.54,"White Noodles":0.45},"HO":{"Brown Noodles":0.0,"White Noodles":0.0},"LA":{"Brown Noodles":1.18,"White Noodles":0.81},"MA":{"Brown Noodles":1.28,"White Noodles":0.81},"ML":{"Brown Noodles":1.68,"White Noodles":0.31},"UA":{"Brown Noodles":4.09,"White Noodles":1.91}},"zone_state":{"GHY":{"ASSAM":0.99},"HO":{"ASSAM":0.0},"LA":{"ASSAM":1.98},"MA":{"ASSAM":2.09},"ML":{"Meghalaya":1.99},"UA":{"ASSAM":5.99}},"zone_div":{"GHY":{"Foods":0.99},"HO":{"Foods":0.0},"LA":{"Foods":1.98},"MA":{"Foods":2.09},"ML":{"Foods":1.99},"UA":{"Foods":5.99}},"zone_inv":{"GHY":1,"HO":2,"LA":1,"MA":1,"ML":1,"UA":2}},"Jan-26":{"rev":23.44,"qty":558858,"inv":13,"cat":{"Brown Noodles":18.79,"Condiments":0.05,"Spreads":0.1,"White Noodles":4.5},"state":{"ASSAM":14.64,"Arunachal Pradesh":1.7,"Manipur":2.65,"Meghalaya":0.99,"TRIPURA":3.46},"zone":{"AP":1.7,"GR":0.99,"HO":0.0,"LA":0.99,"MA":0.99,"MN":2.65,"NB":3.49,"TR":3.46,"UA":9.16},"div":{"Foods":23.44},"sku":{"SIL CHOW CHOW NOODLES CHKN 50G":6.78,"SIL INSTANT NOODLES MASALA 25G PP":2.48,"SIL INSTANT NOODLES MASALA 55G PP":2.03,"SIL MIXED FRUIT JAM 100G TUB":0.03,"SIL MIXED FRUIT JAM 200G BTL":0.05,"SIL MIXED FRUIT JAM 500G BTL":0.02,"SIL TOMATO KETCHUP 425G PCH":0.03,"SIL TOMATO KETCHUP 850G PCH":0.02,"SIL TOMATO KETCHUP 90G PCH":0.0,"SNCTC MINI CHKN NDLS 25G":12.02},"dist":{"Ghosh Enterprise":{"r":0.99,"i":1,"p":"Bijni"},"Lakhdatar Enterprise":{"r":2.57,"i":1,"p":"Dibrugarh"},"Mahato Store":{"r":0.99,"i":1,"p":"Bokolia"},"N.C. Enterprise":{"r":2.49,"i":1,"p":"Gohpur"},"NV Distributor":{"r":3.29,"i":1,"p":"Moranhat"},"Rahul Prasad":{"r":0.99,"i":1,"p":"Tura"},"S.T. Enterprise":{"r":0.99,"i":1,"p":"Tangla"},"STS Enterprises":{"r":2.65,"i":1,"p":"Imphal"},"Sales Promotion":{"r":0.0,"i":2,"p":"Guwahati"},"Sheetal Enterprise":{"r":3.3,"i":1,"p":"Dibrugarh"},"Siang Traders":{"r":1.7,"i":1,"p":"Along (Aalo)"},"Tapati Traders":{"r":3.46,"i":1,"p":"Dharmanagar"}},"zone_cat":{"AP":{"Brown Noodles":1.7},"GR":{"Brown Noodles":0.99},"HO":{"Brown Noodles":0.0,"Condiments":0.0,"Spreads":0.0},"LA":{"Brown Noodles":0.99},"MA":{"Brown Noodles":0.99},"MN":{"Brown Noodles":2.25,"White Noodles":0.4},"NB":{"Brown Noodles":3.14,"Condiments":0.05,"Spreads":0.1,"White Noodles":0.2},"TR":{"Brown Noodles":2.84,"White Noodles":0.62},"UA":{"Brown Noodles":5.88,"White Noodles":3.28}},"zone_state":{"AP":{"Arunachal Pradesh":1.7},"GR":{"Meghalaya":0.99},"HO":{"ASSAM":0.0},"LA":{"ASSAM":0.99},"MA":{"ASSAM":0.99},"MN":{"Manipur":2.65},"NB":{"ASSAM":3.49},"TR":{"TRIPURA":3.46},"UA":{"ASSAM":9.16}},"zone_div":{"AP":{"Foods":1.7},"GR":{"Foods":0.99},"HO":{"Foods":0.0},"LA":{"Foods":0.99},"MA":{"Foods":0.99},"MN":{"Foods":2.65},"NB":{"Foods":3.49},"TR":{"Foods":3.46},"UA":{"Foods":9.16}},"zone_inv":{"AP":1,"GR":1,"HO":2,"LA":1,"MA":1,"MN":1,"NB":2,"TR":1,"UA":3}},"Feb-26":{"rev":52.47,"qty":1800438,"inv":21,"cat":{"Brown Noodles":51.28,"Condiments":0.07,"Spreads":0.26,"White Noodles":0.86},"state":{"ASSAM":44.15,"Meghalaya":2.12,"TRIPURA":6.21},"zone":{"BV":4.37,"LA":9.9,"MA":6.27,"ML":2.12,"NB":4.79,"TR":6.21,"UA":18.82},"div":{"Foods":52.47},"sku":{"SIL CHOW CHOW NOODLES CHKN 50G":2.63,"SIL CHOW CHOW NOODLES VEG 50G":1.16,"SIL INSTANT NOODLES MASALA 25G PP":0.86,"SIL MIXED FRUIT JAM 100G TUB":0.11,"SIL MIXED FRUIT JAM 200G BTL":0.12,"SIL MIXED FRUIT JAM 500G BTL":0.03,"SIL TOMATO KETCHUP 1100G PCH":0.03,"SIL TOMATO KETCHUP 425G PCH":0.02,"SIL TOMATO KETCHUP 850G PCH":0.02,"SIL TOMATO KETCHUP 90G PCH":0.01,"SNCTC MINI CHKN NDLS 25G":47.48},"dist":{"Anil Saha & Sons":{"r":2.12,"i":1,"p":"Shillong (Barabazar)"},"Balaji Store":{"r":1.98,"i":1,"p":"Jagiroad"},"Chatra Bandhu":{"r":1.98,"i":1,"p":"Biswanath Chariali"},"Ganesh Store":{"r":1.98,"i":1,"p":"Lakhipur"},"Hiyya Riya Store":{"r":2.48,"i":1,"p":"Nalbari"},"Maa Bhagawati Enterprise":{"r":2.97,"i":1,"p":"Sivasagar"},"Mahadeb Bhander":{"r":3.6,"i":1,"p":"Agartala"},"Mayabini Enterprise":{"r":0.99,"i":1,"p":"Nagaon(Bhella)"},"N.C. Enterprise":{"r":1.98,"i":1,"p":"Gohpur"},"NV Distributor":{"r":1.98,"i":1,"p":"Moranhat"},"Netram Kanhaiyalall":{"r":4.45,"i":1,"p":"Dhubri"},"RAGHABENDRA DUTTACHOUDHURY":{"r":4.37,"i":1,"p":"Karimganj"},"Saanvi Enterprise":{"r":2.61,"i":1,"p":"Teliamura"},"Shree Balaji Agencies":{"r":4.29,"i":1,"p":"Nagaon"},"Shree Shankar Stores":{"r":9.9,"i":5,"p":"Golaghat"},"Siddhi Vinayak Marketing":{"r":3.96,"i":1,"p":"Tinsukia"},"Tara Commercial":{"r":0.82,"i":1,"p":"Tezpur"}},"zone_cat":{"BV":{"Brown Noodles":3.85,"White Noodles":0.52},"LA":{"Brown Noodles":9.59,"Condiments":0.07,"Spreads":0.1,"White Noodles":0.14},"MA":{"Brown Noodles":6.27},"ML":{"Brown Noodles":2.12},"NB":{"Brown Noodles":4.79},"TR":{"Brown Noodles":5.84,"Spreads":0.16,"White Noodles":0.2},"UA":{"Brown Noodles":18.82}},"zone_state":{"BV":{"ASSAM":4.37},"LA":{"ASSAM":9.9},"MA":{"ASSAM":6.27},"ML":{"Meghalaya":2.12},"NB":{"ASSAM":4.79},"TR":{"TRIPURA":6.21},"UA":{"ASSAM":18.82}},"zone_div":{"BV":{"Foods":4.37},"LA":{"Foods":9.9},"MA":{"Foods":6.27},"ML":{"Foods":2.12},"NB":{"Foods":4.79},"TR":{"Foods":6.21},"UA":{"Foods":18.82}},"zone_inv":{"BV":1,"LA":4,"MA":2,"ML":1,"NB":3,"TR":2,"UA":8}},"Mar-26":{"rev":10.18,"qty":352806,"inv":6,"cat":{"Brown Noodles":10.1,"Condiments":0.03,"Spreads":0.05},"state":{"ASSAM":4.46,"Meghalaya":1.21,"TRIPURA":4.51},"zone":{"ML":1.21,"NB":2.97,"TR":4.51,"UA":1.49},"div":{"Foods":10.18},"sku":{"SIL CHOW CHOW NOODLES CHKN 50G":0.54,"SIL CHOW CHOW NOODLES VEG 50G":0.11,"SIL MIXED FRUIT JAM 200G BTL":0.05,"SIL TOMATO KETCHUP 90G PCH":0.03,"SNCTC MINI CHKN NDLS 25G":9.46},"dist":{"MEGHALAYA TRADING":{"r":1.21,"i":1,"p":"khliehriat"},"NEHA TRADING":{"r":0.99,"i":1,"p":"Dhemaji"},"NV Distributor":{"r":1.49,"i":1,"p":"Moranhat"},"Saradamoni":{"r":1.17,"i":1,"p":"Gandachara"},"Sree Maa Store":{"r":1.98,"i":1,"p":"Rangapara"},"Tapati Traders":{"r":3.35,"i":1,"p":"Dharmanagar"}},"zone_cat":{"ML":{"Brown Noodles":1.21},"NB":{"Brown Noodles":2.97},"TR":{"Brown Noodles":4.43,"Condiments":0.03,"Spreads":0.05},"UA":{"Brown Noodles":1.49}},"zone_state":{"ML":{"Meghalaya":1.21},"NB":{"ASSAM":2.97},"TR":{"TRIPURA":4.51},"UA":{"ASSAM":1.49}},"zone_div":{"ML":{"Foods":1.21},"NB":{"Foods":2.97},"TR":{"Foods":4.51},"UA":{"Foods":1.49}},"zone_inv":{"ML":1,"NB":2,"TR":2,"UA":1}}},"Snacks":{"Oct-25":{"rev":82.77,"qty":2488776,"inv":29,"cat":{"Extruded":8.26,"Fryums":7.74,"Namkeen":26.98,"Potato Chips":39.79},"state":{"ASSAM":70.88,"Meghalaya":3.11,"TRIPURA":8.79},"zone":{"BV":7.56,"GR":3.11,"LA":26.23,"MA":12.81,"NB":9.44,"TR":8.79,"UA":14.83},"div":{"Snacks":82.77},"sku":{"ALANS CHTKL MSL RS5":4.34,"ALANS FC PC CLSSLT RS10":1.81,"ALANS FC PC CLSSLT RS5":6.62,"ALANS NOODLES RS5":1.55,"ALANS PIPES SLT RS5":6.18,"ALANS RC PC CO RS10":3.54,"ALANS RC PC CO RS5":10.42,"ALANS RC PC MSL RS10":1.84,"ALANS RC PC MSL RS5":5.73,"ALANS RC PC TMT RS10":2.44,"ALANS RC PC TMT RS5":7.39,"ALANS RINGS TOM TOY RS5":3.92,"MASTI OYE NMKN ALO BHJIA RS5":2.87,"MASTI OYE NMKN KHTA METHA RS5":3.89,"MASTI OYE NMKN NVRTN MIX RS5":2.73,"MASTI OYE NMKN PNJBI TDKA RS5":4.47,"MASTI OYE NMKN SV BHJIA RS5":6.77,"MASTI OYE NMKN TSTY PENTS RS5":6.26},"dist":{"ABA Commerce Inspirations":{"r":2.3,"i":1,"p":"Silchar"},"Aara Trade Associates":{"r":5.26,"i":2,"p":"Karimganj"},"Ayush Trading":{"r":2.88,"i":1,"p":"Nagaon"},"B.C. Paul":{"r":3.17,"i":1,"p":"Simaluguri / Nazira"},"D New Stores":{"r":2.89,"i":1,"p":"Goalpara"},"DSS Traders":{"r":4.17,"i":2,"p":"Howly"},"Gurudeb Agency":{"r":2.57,"i":1,"p":"Pratapgarh"},"Kamdhenu Traders":{"r":3.29,"i":1,"p":"Hojai"},"Khatu Shyam Enterprise":{"r":2.53,"i":1,"p":"Dibrugarh"},"Lisa Enterprise":{"r":3.09,"i":1,"p":"Tezpur"},"M.J.M Store":{"r":2.73,"i":1,"p":"Bilasipara"},"Maa Bageswari Store":{"r":5.14,"i":2,"p":"Bongaigaon"},"Maa Kali Enterprise":{"r":3.15,"i":1,"p":"Rowta"},"Maa Kali Store":{"r":2.74,"i":1,"p":"Darrangiri"},"Mahato Store":{"r":3.22,"i":1,"p":"Bokolia"},"R.S. Marketing":{"r":2.88,"i":1,"p":"Tinsukia"},"Rahul Prasad":{"r":3.11,"i":1,"p":"Tura"},"Rubi Enterprise":{"r":2.76,"i":1,"p":"Barpeta Road"},"S.D. Store":{"r":2.88,"i":1,"p":"Nalbari"},"S.T. Enterprise":{"r":3.2,"i":1,"p":"Tangla"},"Saha Bhandar & Sons":{"r":2.92,"i":1,"p":"Nagarbera"},"Samrat Store":{"r":3.43,"i":1,"p":"Lanka"},"Shree Shankar Stores":{"r":3.13,"i":1,"p":"Golaghat"},"Swastik Trade & Agencies":{"r":3.12,"i":1,"p":"Jorhat"},"Tapati Traders":{"r":6.21,"i":2,"p":"Dharmanagar"}},"zone_cat":{"BV":{"Extruded":0.44,"Fryums":0.28,"Namkeen":2.45,"Potato Chips":4.39},"GR":{"Extruded":0.26,"Fryums":0.22,"Namkeen":1.25,"Potato Chips":1.38},"LA":{"Extruded":3.2,"Fryums":4.47,"Namkeen":8.29,"Potato Chips":10.27},"MA":{"Extruded":1.09,"Fryums":0.65,"Namkeen":5.44,"Potato Chips":5.64},"NB":{"Fryums":0.24,"Namkeen":1.41,"Potato Chips":7.79},"TR":{"Extruded":1.19,"Fryums":0.66,"Namkeen":2.64,"Potato Chips":4.3},"UA":{"Extruded":2.08,"Fryums":1.22,"Namkeen":5.5,"Potato Chips":6.03}},"zone_state":{"BV":{"ASSAM":7.56},"GR":{"Meghalaya":3.11},"LA":{"ASSAM":26.23},"MA":{"ASSAM":12.81},"NB":{"ASSAM":9.44},"TR":{"TRIPURA":8.79},"UA":{"ASSAM":14.83}},"zone_div":{"BV":{"Snacks":7.56},"GR":{"Snacks":3.11},"LA":{"Snacks":26.23},"MA":{"Snacks":12.81},"NB":{"Snacks":9.44},"TR":{"Snacks":8.79},"UA":{"Snacks":14.83}},"zone_inv":{"BV":3,"GR":1,"LA":10,"MA":4,"NB":3,"TR":3,"UA":5}},"Nov-25":{"rev":108.22,"qty":3056280,"inv":38,"cat":{"Extruded":9.12,"Fryums":14.74,"Namkeen":22.62,"Potato Chips":61.74},"state":{"ASSAM":84.44,"Meghalaya":10.73,"TRIPURA":13.04},"zone":{"BV":10.89,"GR":2.07,"LA":18.16,"MA":17.31,"ML":8.66,"NB":14.95,"TR":13.04,"UA":23.13},"div":{"Snacks":108.22},"sku":{"ALANS CHTKL MSL RS5":7.8,"ALANS FC PC CLSSLT RS10":2.5,"ALANS FC PC CLSSLT RS5":8.37,"ALANS NOODLES RS5":1.88,"ALANS PIPES SLT RS5":12.87,"ALANS RC PC CO RS10":4.67,"ALANS RC PC CO RS5":19.13,"ALANS RC PC MSL RS10":1.07,"ALANS RC PC MSL RS5":7.17,"ALANS RC PC TMT RS10":3.01,"ALANS RC PC TMT RS5":15.82,"ALANS RINGS TOM TOY RS5":1.32,"MASTI OYE NMKN ALO BHJIA RS5":2.33,"MASTI OYE NMKN KHTA METHA RS5":2.22,"MASTI OYE NMKN NVRTN MIX RS5":2.3,"MASTI OYE NMKN PNJBI TDKA RS5":3.89,"MASTI OYE NMKN SV BHJIA RS5":6.06,"MASTI OYE NMKN TSTY PENTS RS5":5.82},"dist":{"Aara Trade Associates":{"r":10.89,"i":4,"p":"Karimganj"},"Amit and Sons":{"r":5.64,"i":1,"p":"Shillong (Barabazar)"},"Ayush Trading":{"r":6.15,"i":2,"p":"Nagaon"},"Balabux Dhanraj":{"r":3.3,"i":1,"p":"Dhubri"},"Balaji Store":{"r":2.63,"i":1,"p":"Jagiroad"},"DSS Traders":{"r":2.34,"i":1,"p":"Howly"},"Kamdhenu Traders":{"r":3.04,"i":1,"p":"Hojai"},"Kesari":{"r":2.4,"i":1,"p":"Doomdooma"},"Lisa Enterprise":{"r":6.8,"i":2,"p":"Tezpur"},"M.J.M Store":{"r":2.5,"i":1,"p":"Bilasipara"},"Maa Bageswari Store":{"r":2.37,"i":1,"p":"Bongaigaon"},"Maa Bhagawati Enterprise":{"r":5.6,"i":2,"p":"Sivasagar"},"Maa Enterprise":{"r":2.7,"i":1,"p":"Chhanban"},"Maa Kali Enterprise":{"r":2.81,"i":1,"p":"Rowta"},"Mahato Store":{"r":2.7,"i":1,"p":"Bokolia"},"Manik Chandra Roy":{"r":2.06,"i":1,"p":"Golakganj"},"Manju Store":{"r":6.05,"i":2,"p":"Sonari"},"Ramthakur Agency":{"r":2.74,"i":1,"p":"Belonia"},"Rubi Enterprise":{"r":3.04,"i":1,"p":"Barpeta Road"},"S.D. Store":{"r":2.55,"i":1,"p":"Nalbari"},"S.T. Enterprise":{"r":2.58,"i":1,"p":"Tangla"},"Samrat Store":{"r":2.78,"i":1,"p":"Lanka"},"Shree Hanuman Bhandar":{"r":2.77,"i":1,"p":"North Lakhimpur"},"Shree Shankar Stores":{"r":2.62,"i":1,"p":"Golaghat"},"Shri Krishna Store":{"r":2.07,"i":1,"p":"Singimari"},"Shubham Enterprise":{"r":3.02,"i":1,"p":"Shillong (Garikhana)"},"Swastik Trade & Agencies":{"r":2.99,"i":1,"p":"Jorhat"},"Tapati Traders":{"r":7.6,"i":3,"p":"Dharmanagar"},"Tullah Enterprise":{"r":3.47,"i":1,"p":"Margherita"}},"zone_cat":{"BV":{"Extruded":0.25,"Fryums":1.18,"Namkeen":1.35,"Potato Chips":8.1},"GR":{"Extruded":0.55,"Fryums":0.47,"Namkeen":0.13,"Potato Chips":0.92},"LA":{"Extruded":1.28,"Fryums":3.86,"Namkeen":2.16,"Potato Chips":10.86},"MA":{"Extruded":2.65,"Fryums":2.63,"Namkeen":3.13,"Potato Chips":8.9},"ML":{"Extruded":0.18,"Fryums":0.41,"Namkeen":6.35,"Potato Chips":1.72},"NB":{"Extruded":0.92,"Fryums":1.46,"Namkeen":2.08,"Potato Chips":10.49},"TR":{"Extruded":1.28,"Fryums":2.7,"Namkeen":0.79,"Potato Chips":8.26},"UA":{"Extruded":2.01,"Fryums":2.03,"Namkeen":6.6,"Potato Chips":12.48}},"zone_state":{"BV":{"ASSAM":10.89},"GR":{"Meghalaya":2.07},"LA":{"ASSAM":18.16},"MA":{"ASSAM":17.31},"ML":{"Meghalaya":8.66},"NB":{"ASSAM":14.95},"TR":{"TRIPURA":13.04},"UA":{"ASSAM":23.13}},"zone_div":{"BV":{"Snacks":10.89},"GR":{"Snacks":2.07},"LA":{"Snacks":18.16},"MA":{"Snacks":17.31},"ML":{"Snacks":8.66},"NB":{"Snacks":14.95},"TR":{"Snacks":13.04},"UA":{"Snacks":23.13}},"zone_inv":{"BV":4,"GR":1,"LA":7,"MA":6,"ML":2,"NB":5,"TR":5,"UA":8}},"Dec-25":{"rev":157.28,"qty":3784968,"inv":52,"cat":{"Extruded":17.21,"Fryums":29.69,"Namkeen":23.18,"Potato Chips":87.2},"state":{"ASSAM":115.57,"Arunachal Pradesh":8.63,"Manipur":2.78,"Meghalaya":7.01,"TRIPURA":23.27},"zone":{"AP":8.63,"BV":12.54,"GHY":8.67,"GR":4.46,"LA":14.64,"MA":18.63,"ML":2.55,"MN":2.78,"NB":23.75,"TR":23.27,"UA":37.34},"div":{"Snacks":157.28},"sku":{"ALANS CHTKL MSL RS5":17.21,"ALANS FC PC CLSSLT RS10":6.77,"ALANS FC PC CLSSLT RS5":12.57,"ALANS FC PC CLSSLT RS50":0.28,"ALANS NOODLES RS5":11.09,"ALANS PIPES SLT RS5":18.6,"ALANS RC PC CO RS10":7.74,"ALANS RC PC CO RS5":16.86,"ALANS RC PC CO RS50":0.28,"ALANS RC PC MSL RS10":6.22,"ALANS RC PC MSL RS5":13.6,"ALANS RC PC MSL RS50":0.28,"ALANS RC PC TMT RS10":6.86,"ALANS RC PC TMT RS5":15.49,"ALANS RC PC TMT RS50":0.28,"MASTI OYE NMKN ALO BHJIA RS5":1.59,"MASTI OYE NMKN ALO BHJIA RS55":0.05,"MASTI OYE NMKN KHTA METHA RS5":4.32,"MASTI OYE NMKN KHTA METHA RS55":0.05,"MASTI OYE NMKN NVRTN MIX RS5":3.55,"MASTI OYE NMKN PNJBI TDKA RS5":3.24,"MASTI OYE NMKN SV BHJIA RS5":6.37,"MASTI OYE NMKN SV BHJIA RS55":0.05,"MASTI OYE NMKN TSTY PENTS RS5":3.9,"MASTI OYE NMKN TSTY PENTS RS55":0.05},"dist":{"ABA Commerce Inspirations":{"r":2.9,"i":1,"p":"Silchar"},"Aara Trade Associates":{"r":9.64,"i":3,"p":"Karimganj"},"Ayush Trading":{"r":8.41,"i":3,"p":"Nagaon"},"Balaji Store":{"r":2.8,"i":1,"p":"Jagiroad"},"Bee Enterprise":{"r":3.63,"i":1,"p":"Guwahati"},"D.S. Store":{"r":1.71,"i":1,"p":"Sonapur"},"Ganesh Enterprise":{"r":3.19,"i":1,"p":"Silapathar"},"Gurudeb Agency":{"r":3.1,"i":1,"p":"Pratapgarh"},"Hiyya Riya Store":{"r":3.25,"i":1,"p":"Nalbari"},"Kamdhenu Traders":{"r":4.46,"i":1,"p":"Hojai"},"Khatu Shyam Enterprise":{"r":3.17,"i":1,"p":"Dibrugarh"},"Lakhdatar Enterprise":{"r":3.35,"i":1,"p":"Dibrugarh"},"Lering Bagang Trader":{"r":2.18,"i":1,"p":"Seppa"},"Lisa Enterprise":{"r":3.68,"i":1,"p":"Tezpur"},"M.J.M Store":{"r":2.75,"i":1,"p":"Bilasipara"},"Maa Bhagawati Enterprise":{"r":6.36,"i":2,"p":"Sivasagar"},"Maa Enterprise":{"r":5.21,"i":2,"p":"Chhanban"},"Maa Kali Enterprise":{"r":2.68,"i":1,"p":"Rowta"},"Mahato Store":{"r":2.96,"i":1,"p":"Bokolia"},"Manik Chandra Roy":{"r":2.54,"i":1,"p":"Golakganj"},"Manju Store":{"r":2.67,"i":1,"p":"Sonari"},"Mayabini Enterprise":{"r":6.11,"i":2,"p":"Nagaon(Bhella)"},"N.C. Enterprise":{"r":11.49,"i":3,"p":"Gohpur"},"NV Distributor":{"r":6.3,"i":2,"p":"Moranhat"},"Pema Enterprise":{"r":2.55,"i":1,"p":"Tawang"},"R.S. Marketing":{"r":3.48,"i":1,"p":"Tinsukia"},"Rahul Prasad":{"r":1.63,"i":1,"p":"Tura"},"Ramthakur Agency":{"r":3.14,"i":1,"p":"Belonia"},"S.T. Enterprise":{"r":2.7,"i":1,"p":"Tangla"},"STS Enterprises":{"r":2.78,"i":1,"p":"Imphal"},"Shree Shankar Stores":{"r":5.79,"i":2,"p":"Golaghat"},"Shri Krishna Store":{"r":2.84,"i":1,"p":"Singimari"},"Shubham Enterprise":{"r":2.55,"i":1,"p":"Shillong (Garikhana)"},"Siang Traders":{"r":3.91,"i":1,"p":"Along (Aalo)"},"Sri B.R. Agencies":{"r":3.33,"i":1,"p":"Guwahati"},"Swastik Trade & Agencies":{"r":3.01,"i":1,"p":"Jorhat"},"Tapati Traders":{"r":11.82,"i":4,"p":"Dharmanagar"},"Tullah Enterprise":{"r":3.21,"i":1,"p":"Margherita"}},"zone_cat":{"AP":{"Fryums":0.38,"Potato Chips":8.26},"BV":{"Extruded":1.7,"Fryums":1.92,"Namkeen":1.88,"Potato Chips":7.05},"GHY":{"Extruded":0.28,"Fryums":1.02,"Namkeen":1.41,"Potato Chips":5.95},"GR":{"Extruded":0.57,"Fryums":1.17,"Namkeen":0.47,"Potato Chips":2.26},"LA":{"Extruded":1.16,"Fryums":3.37,"Namkeen":1.8,"Potato Chips":8.3},"MA":{"Extruded":2.35,"Fryums":3.23,"Namkeen":2.56,"Potato Chips":10.48},"ML":{"Fryums":0.65,"Potato Chips":1.9},"MN":{"Extruded":0.38,"Fryums":0.65,"Potato Chips":1.76},"NB":{"Extruded":3.08,"Fryums":2.38,"Namkeen":3.23,"Potato Chips":15.06},"TR":{"Extruded":4.33,"Fryums":7.91,"Namkeen":5.99,"Potato Chips":5.04},"UA":{"Extruded":3.36,"Fryums":7.01,"Namkeen":5.83,"Potato Chips":21.14}},"zone_state":{"AP":{"Arunachal Pradesh":8.63},"BV":{"ASSAM":12.54},"GHY":{"ASSAM":8.67},"GR":{"Meghalaya":4.46},"LA":{"ASSAM":14.64},"MA":{"ASSAM":18.63},"ML":{"Meghalaya":2.55},"MN":{"Manipur":2.78},"NB":{"ASSAM":23.75},"TR":{"TRIPURA":23.27},"UA":{"ASSAM":37.34}},"zone_div":{"AP":{"Snacks":8.63},"BV":{"Snacks":12.54},"GHY":{"Snacks":8.67},"GR":{"Snacks":4.46},"LA":{"Snacks":14.64},"MA":{"Snacks":18.63},"ML":{"Snacks":2.55},"MN":{"Snacks":2.78},"NB":{"Snacks":23.75},"TR":{"Snacks":23.27},"UA":{"Snacks":37.34}},"zone_inv":{"AP":3,"BV":4,"GHY":3,"GR":2,"LA":5,"MA":6,"ML":1,"MN":1,"NB":7,"TR":8,"UA":12}},"Jan-26":{"rev":127.59,"qty":3171720,"inv":46,"cat":{"Extruded":11.03,"Fryums":34.81,"Namkeen":8.77,"Potato Chips":72.97},"state":{"ASSAM":99.59,"Manipur":11.05,"Meghalaya":3.47,"TRIPURA":13.47},"zone":{"BV":8.82,"GHY":7.52,"LA":9.99,"MA":12.91,"ML":3.47,"MN":11.05,"NB":27.84,"TR":13.47,"UA":32.5},"div":{"Snacks":127.59},"sku":{"ALANS CHTKL MSL RS5":11.03,"ALANS FC PC CLSSLT RS10":3.04,"ALANS FC PC CLSSLT RS5":13.68,"ALANS FC PC CLSSLT RS50":0.28,"ALANS NOODLES RS5":13.83,"ALANS PIPES SLT RS5":20.98,"ALANS RC PC CO RS10":4.93,"ALANS RC PC CO RS5":20.16,"ALANS RC PC CO RS50":0.28,"ALANS RC PC MSL RS10":2.78,"ALANS RC PC MSL RS5":11.76,"ALANS RC PC MSL RS50":0.25,"ALANS RC PC TMT RS10":4.51,"ALANS RC PC TMT RS5":11.06,"ALANS RC PC TMT RS50":0.25,"MASTI OYE NMKN ALO BHJIA RS5":0.61,"MASTI OYE NMKN KHTA METHA RS5":2.41,"MASTI OYE NMKN NVRTN MIX RS5":1.22,"MASTI OYE NMKN PNJBI TDKA RS5":2.42,"MASTI OYE NMKN SV BHJIA RS5":0.98,"MASTI OYE NMKN TSTY PENTS RS5":1.13},"dist":{"Aara Trade Associates":{"r":8.82,"i":3,"p":"Karimganj"},"Ayush Trading":{"r":7.81,"i":3,"p":"Nagaon"},"Balaji Store":{"r":2.5,"i":1,"p":"Jagiroad"},"D.S. Store":{"r":1.64,"i":1,"p":"Sonapur"},"Ganesh Enterprise":{"r":5.01,"i":2,"p":"Silapathar"},"Goodwill Enterprise":{"r":1.71,"i":1,"p":"Guwahati"},"Gurudeb Agency":{"r":2.92,"i":1,"p":"Pratapgarh"},"Hazarika Store":{"r":2.72,"i":1,"p":"Majuli"},"Hiyya Riya Store":{"r":2.84,"i":1,"p":"Nalbari"},"Kamdhenu Traders":{"r":2.6,"i":1,"p":"Hojai"},"Kesari":{"r":3.51,"i":1,"p":"Doomdooma"},"Lakhdatar Enterprise":{"r":3.3,"i":1,"p":"Dibrugarh"},"Lisa Enterprise":{"r":2.85,"i":1,"p":"Tezpur"},"Maa Bhagawati Enterprise":{"r":2.6,"i":1,"p":"Sivasagar"},"Manju Store":{"r":2.77,"i":1,"p":"Sonari"},"Mausam Kalita":{"r":2.02,"i":1,"p":"Guwahati"},"Mayabini Enterprise":{"r":7.16,"i":2,"p":"Nagaon(Bhella)"},"N.C. Enterprise":{"r":11.89,"i":4,"p":"Gohpur"},"NV Distributor":{"r":5.52,"i":2,"p":"Moranhat"},"PJ Enterprise":{"r":3.51,"i":1,"p":"Titabor"},"R K P Traders":{"r":5.77,"i":2,"p":"Imphal"},"Ramthakur Agency":{"r":2.48,"i":1,"p":"Belonia"},"S Majaw Store":{"r":3.47,"i":1,"p":"Nongpoh"},"S.T. Enterprise":{"r":2.32,"i":1,"p":"Tangla"},"STS Enterprises":{"r":5.28,"i":2,"p":"Imphal"},"Saanvi Enterprise":{"r":5.45,"i":2,"p":"Teliamura"},"Sheetal Enterprise":{"r":3.1,"i":1,"p":"Dibrugarh"},"Shree Shankar Stores":{"r":2.68,"i":1,"p":"Golaghat"},"Sree Maa Store":{"r":2.84,"i":1,"p":"Rangapara"},"Sri B.R. Agencies":{"r":2.15,"i":1,"p":"Guwahati"},"Tapati Traders":{"r":2.62,"i":1,"p":"Dharmanagar"},"Tele Point":{"r":2.92,"i":1,"p":"Mazbat"},"Tullah Enterprise":{"r":2.8,"i":1,"p":"Margherita"}},"zone_cat":{"BV":{"Extruded":0.38,"Fryums":1.99,"Namkeen":0.67,"Potato Chips":5.78},"GHY":{"Extruded":0.58,"Fryums":1.32,"Potato Chips":5.62},"LA":{"Extruded":0.69,"Fryums":1.67,"Namkeen":2.3,"Potato Chips":5.33},"MA":{"Extruded":1.58,"Fryums":4.38,"Potato Chips":6.95},"ML":{"Extruded":0.16,"Fryums":0.32,"Potato Chips":2.99},"MN":{"Extruded":0.87,"Fryums":3.03,"Potato Chips":7.16},"NB":{"Extruded":3.3,"Fryums":9.68,"Namkeen":2.02,"Potato Chips":12.85},"TR":{"Extruded":0.75,"Fryums":4.21,"Potato Chips":8.51},"UA":{"Extruded":2.72,"Fryums":8.22,"Namkeen":3.78,"Potato Chips":17.78}},"zone_state":{"BV":{"ASSAM":8.82},"GHY":{"ASSAM":7.52},"LA":{"ASSAM":9.99},"MA":{"ASSAM":12.91},"ML":{"Meghalaya":3.47},"MN":{"Manipur":11.05},"NB":{"ASSAM":27.84},"TR":{"TRIPURA":13.47},"UA":{"ASSAM":32.5}},"zone_div":{"BV":{"Snacks":8.82},"GHY":{"Snacks":7.52},"LA":{"Snacks":9.99},"MA":{"Snacks":12.91},"ML":{"Snacks":3.47},"MN":{"Snacks":11.05},"NB":{"Snacks":27.84},"TR":{"Snacks":13.47},"UA":{"Snacks":32.5}},"zone_inv":{"BV":3,"GHY":4,"LA":3,"MA":5,"ML":1,"MN":4,"NB":10,"TR":5,"UA":11}},"Feb-26":{"rev":132.32,"qty":3407976,"inv":55,"cat":{"Extruded":14.31,"Fryums":38.4,"Namkeen":5.03,"Potato Chips":74.58},"state":{"ASSAM":87.44,"Arunachal Pradesh":3.71,"Manipur":8.03,"Meghalaya":3.43,"TRIPURA":29.71},"zone":{"AP":3.71,"BV":8.8,"GHY":5.92,"GR":1.61,"LA":13.21,"MA":9.7,"ML":1.82,"MN":8.03,"NB":15.02,"TR":29.71,"UA":34.79},"div":{"Snacks":132.32},"sku":{"ALANS CHTKL MSL RS5":14.22,"ALANS FC PC CLSSLT RS10":3.24,"ALANS FC PC CLSSLT RS5":12.95,"ALANS FC PC CLSSLT RS50":0.14,"ALANS NOODLES RS5":13.9,"ALANS PIPES SLT RS5":24.51,"ALANS RC PC CO RS10":4.65,"ALANS RC PC CO RS5":17.6,"ALANS RC PC CO RS50":0.16,"ALANS RC PC MSL RS10":3.75,"ALANS RC PC MSL RS5":12.6,"ALANS RC PC MSL RS50":0.15,"ALANS RC PC TMT RS10":4.1,"ALANS RC PC TMT RS5":15.17,"ALANS RC PC TMT RS50":0.07,"ALANS RINGS TOM TOY RS5":0.09,"MASTI OYE NMKN ALO BHJIA RS5":0.19,"MASTI OYE NMKN ALO BHJIA RS55":0.16,"MASTI OYE NMKN KHTA METHA RS5":0.6,"MASTI OYE NMKN NVRTN MIX RS5":0.67,"MASTI OYE NMKN PNJBI TDKA RS5":1.22,"MASTI OYE NMKN PNJBI TDKA RS55":0.16,"MASTI OYE NMKN SV BHJIA RS5":0.12,"MASTI OYE NMKN SV BHJIA RS55":0.16,"MASTI OYE NMKN TSTY PENTS RS5":1.65,"MASTI OYE NMKN TSTY PENTS RS55":0.1},"dist":{"ABA Commerce Inspirations":{"r":3.14,"i":1,"p":"Silchar"},"Aara Trade Associates":{"r":5.66,"i":2,"p":"Karimganj"},"Ayush Trading":{"r":5.0,"i":2,"p":"Nagaon"},"Balabux Dhanraj":{"r":2.85,"i":1,"p":"Dhubri"},"Chatra Bandhu":{"r":2.82,"i":1,"p":"Biswanath Chariali"},"D.M. Enterprise":{"r":2.09,"i":2,"p":"Pathsala"},"D.S. Store":{"r":2.88,"i":2,"p":"Sonapur"},"Ganesh Enterprise":{"r":2.31,"i":1,"p":"Silapathar"},"Geeta Marketing":{"r":2.79,"i":1,"p":"Barpeta Road"},"Gurudeb Agency":{"r":8.09,"i":3,"p":"Pratapgarh"},"Kamdhenu Traders":{"r":2.14,"i":1,"p":"Hojai"},"Lakhdatar Enterprise":{"r":2.81,"i":1,"p":"Dibrugarh"},"Lering Bagang Trader":{"r":3.71,"i":2,"p":"Seppa"},"Maa Bhagawati Enterprise":{"r":5.75,"i":2,"p":"Sivasagar"},"Maa Enterprise":{"r":5.06,"i":2,"p":"Chhanban"},"Mahato Store":{"r":2.55,"i":1,"p":"Bokolia"},"Manju Store":{"r":2.34,"i":1,"p":"Sonari"},"Mausam Kalita":{"r":1.51,"i":1,"p":"Guwahati"},"Mayabini Enterprise":{"r":2.98,"i":1,"p":"Nagaon(Bhella)"},"N.C. Enterprise":{"r":2.66,"i":1,"p":"Gohpur"},"NV Distributor":{"r":4.68,"i":2,"p":"Moranhat"},"PJ Enterprise":{"r":3.18,"i":1,"p":"Titabor"},"R K P Traders":{"r":5.36,"i":2,"p":"Imphal"},"Ramthakur Agency":{"r":2.33,"i":1,"p":"Belonia"},"S S BROTHERS STORE":{"r":2.46,"i":1,"p":"Dhula"},"S.T. Enterprise":{"r":2.43,"i":1,"p":"Tangla"},"STS Enterprises":{"r":2.67,"i":1,"p":"Imphal"},"Saanvi Enterprise":{"r":5.06,"i":2,"p":"Teliamura"},"Saradamoni":{"r":2.53,"i":1,"p":"Gandachara"},"Sheetal Enterprise":{"r":2.92,"i":1,"p":"Dibrugarh"},"Shree Shankar Stores":{"r":4.94,"i":2,"p":"Golaghat"},"Shubham Enterprise":{"r":1.82,"i":1,"p":"Shillong (Garikhana)"},"Sree Maa Store":{"r":2.35,"i":1,"p":"Rangapara"},"Sri B.R. Agencies":{"r":1.53,"i":1,"p":"Guwahati"},"Subhash Das & Brothers":{"r":1.61,"i":1,"p":"Baghmara"},"Swastik Trade & Agencies":{"r":5.64,"i":2,"p":"Jorhat"},"Tapati Traders":{"r":6.65,"i":3,"p":"Dharmanagar"},"Tullah Enterprise":{"r":2.54,"i":1,"p":"Margherita"},"Vishwanath Prasad Gupta":{"r":2.5,"i":1,"p":"Phulbari"}},"zone_cat":{"AP":{"Fryums":0.62,"Potato Chips":3.09},"BV":{"Extruded":0.25,"Fryums":2.48,"Namkeen":1.67,"Potato Chips":4.4},"GHY":{"Extruded":0.9,"Fryums":2.05,"Potato Chips":2.97},"GR":{"Extruded":0.04,"Fryums":0.62,"Namkeen":0.2,"Potato Chips":0.75},"LA":{"Extruded":1.35,"Fryums":2.39,"Namkeen":0.91,"Potato Chips":8.57},"MA":{"Extruded":1.24,"Fryums":3.12,"Namkeen":0.13,"Potato Chips":5.21},"ML":{"Extruded":0.09,"Fryums":0.75,"Namkeen":0.78,"Potato Chips":0.19},"MN":{"Extruded":1.3,"Fryums":2.14,"Potato Chips":4.59},"NB":{"Extruded":2.24,"Fryums":5.31,"Namkeen":0.75,"Potato Chips":6.73},"TR":{"Extruded":2.6,"Fryums":10.49,"Namkeen":0.2,"Potato Chips":16.42},"UA":{"Extruded":4.31,"Fryums":8.43,"Namkeen":0.39,"Potato Chips":21.66}},"zone_state":{"AP":{"Arunachal Pradesh":3.71},"BV":{"ASSAM":8.8},"GHY":{"ASSAM":5.92},"GR":{"Meghalaya":1.61},"LA":{"ASSAM":13.21},"MA":{"ASSAM":9.7},"ML":{"Meghalaya":1.82},"MN":{"Manipur":8.03},"NB":{"ASSAM":15.02},"TR":{"TRIPURA":29.71},"UA":{"ASSAM":34.79}},"zone_div":{"AP":{"Snacks":3.71},"BV":{"Snacks":8.8},"GHY":{"Snacks":5.92},"GR":{"Snacks":1.61},"LA":{"Snacks":13.21},"MA":{"Snacks":9.7},"ML":{"Snacks":1.82},"MN":{"Snacks":8.03},"NB":{"Snacks":15.02},"TR":{"Snacks":29.71},"UA":{"Snacks":34.79}},"zone_inv":{"AP":2,"BV":3,"GHY":4,"GR":1,"LA":6,"MA":4,"ML":1,"MN":3,"NB":6,"TR":12,"UA":13}},"Mar-26":{"rev":88.28,"qty":2408016,"inv":39,"cat":{"Extruded":13.11,"Fryums":21.88,"Namkeen":3.64,"Potato Chips":49.65},"state":{"ASSAM":53.21,"Arunachal Pradesh":3.3,"Manipur":4.99,"Meghalaya":8.98,"TRIPURA":17.79},"zone":{"AP":3.3,"BV":5.44,"GHY":4.4,"GR":1.43,"LA":7.82,"MA":2.06,"ML":7.55,"MN":4.99,"NB":11.89,"TR":17.79,"UA":21.6},"div":{"Snacks":88.28},"sku":{"ALANS CHTKL MSL RS5":13.11,"ALANS FC PC CLSSLT RS10":2.6,"ALANS FC PC CLSSLT RS5":8.32,"ALANS FC PC CLSSLT RS50":0.03,"ALANS NOODLES RS5":4.34,"ALANS PIPES SLT RS5":17.54,"ALANS RC PC CO RS10":2.48,"ALANS RC PC CO RS5":12.17,"ALANS RC PC CO RS50":0.03,"ALANS RC PC MSL RS10":2.56,"ALANS RC PC MSL RS5":8.41,"ALANS RC PC MSL RS50":0.02,"ALANS RC PC TMT RS10":2.36,"ALANS RC PC TMT RS5":10.68,"MASTI OYE NMKN KHTA METHA RS5":0.57,"MASTI OYE NMKN NVRTN MIX RS5":0.56,"MASTI OYE NMKN PNJBI TDKA RS5":1.07,"MASTI OYE NMKN SV BHJIA RS5":0.86,"MASTI OYE NMKN TSTY PENTS RS5":0.57},"dist":{"Aara Trade Associates":{"r":5.44,"i":2,"p":"Karimganj"},"Anil Saha & Sons":{"r":4.07,"i":2,"p":"Shillong (Barabazar)"},"Ayush Trading":{"r":2.06,"i":1,"p":"Nagaon"},"Bikauram Kamalapuri and Company":{"r":2.34,"i":1,"p":"Naharkatia"},"C H ENTERPRISE":{"r":2.5,"i":1,"p":"Bongaigaon"},"D.S. Store":{"r":1.35,"i":1,"p":"Sonapur"},"DUTTA BHANDAR":{"r":2.45,"i":1,"p":"Dhubri"},"Ganesh Enterprise":{"r":2.3,"i":1,"p":"Silapathar"},"Gurudeb Agency":{"r":2.64,"i":1,"p":"Pratapgarh"},"HANUMAN BHANDAR":{"r":2.33,"i":1,"p":"Dhemaji"},"Hazarika Store":{"r":2.4,"i":1,"p":"Majuli"},"Hiyya Riya Store":{"r":2.86,"i":1,"p":"Nalbari"},"Lakhdatar Enterprise":{"r":2.33,"i":1,"p":"Dibrugarh"},"Maa Bhagawati Enterprise":{"r":2.23,"i":1,"p":"Sivasagar"},"Maa Kali Enterprise":{"r":2.34,"i":1,"p":"Rowta"},"Mahadeb Bhander":{"r":2.77,"i":1,"p":"Agartala"},"N.C. Enterprise":{"r":2.53,"i":1,"p":"Gohpur"},"NV Distributor":{"r":2.18,"i":1,"p":"Moranhat"},"PJ Enterprise":{"r":2.52,"i":1,"p":"Titabor"},"R K P Traders":{"r":2.53,"i":1,"p":"Imphal"},"R.B.ENTERPRISES":{"r":2.63,"i":1,"p":"Tinsukia"},"Rahul Prasad":{"r":1.43,"i":1,"p":"Tura"},"S Majaw Store":{"r":1.72,"i":1,"p":"Nongpoh"},"STS Enterprises":{"r":2.46,"i":1,"p":"Imphal"},"Saanvi Enterprise":{"r":8.16,"i":3,"p":"Teliamura"},"Sheetal Enterprise":{"r":2.53,"i":1,"p":"Dibrugarh"},"Shubham Enterprise":{"r":1.76,"i":1,"p":"Shillong (Garikhana)"},"Siang Traders":{"r":1.69,"i":1,"p":"Along (Aalo)"},"Sri B.R. Agencies":{"r":1.55,"i":1,"p":"Guwahati"},"TALUKDAR ENTERPRISE":{"r":1.5,"i":1,"p":"Guwahati"},"TMY Enterprises":{"r":1.61,"i":1,"p":"Dumporijo"},"Tapati Traders":{"r":4.22,"i":2,"p":"Dharmanagar"},"Tele Point":{"r":2.39,"i":1,"p":"Mazbat"},"Tullah Enterprise":{"r":2.44,"i":1,"p":"Margherita"}},"zone_cat":{"AP":{"Extruded":0.17,"Fryums":0.27,"Potato Chips":2.85},"BV":{"Fryums":1.25,"Namkeen":0.87,"Potato Chips":3.32},"GHY":{"Extruded":0.76,"Fryums":1.0,"Potato Chips":2.65},"GR":{"Extruded":0.29,"Fryums":0.5,"Potato Chips":0.64},"LA":{"Extruded":1.31,"Fryums":1.45,"Namkeen":0.35,"Potato Chips":4.71},"MA":{"Extruded":0.47,"Fryums":1.25,"Potato Chips":0.35},"ML":{"Extruded":0.8,"Fryums":1.28,"Namkeen":0.74,"Potato Chips":4.73},"MN":{"Extruded":0.41,"Fryums":1.5,"Potato Chips":3.09},"NB":{"Extruded":2.75,"Fryums":2.27,"Namkeen":0.12,"Potato Chips":6.75},"TR":{"Extruded":3.14,"Fryums":4.8,"Namkeen":1.56,"Potato Chips":8.29},"UA":{"Extruded":3.01,"Fryums":6.32,"Potato Chips":12.27}},"zone_state":{"AP":{"Arunachal Pradesh":3.3},"BV":{"ASSAM":5.44},"GHY":{"ASSAM":4.4},"GR":{"Meghalaya":1.43},"LA":{"ASSAM":7.82},"MA":{"ASSAM":2.06},"ML":{"Meghalaya":7.55},"MN":{"Manipur":4.99},"NB":{"ASSAM":11.89},"TR":{"TRIPURA":17.79},"UA":{"ASSAM":21.6}},"zone_div":{"AP":{"Snacks":3.3},"BV":{"Snacks":5.44},"GHY":{"Snacks":4.4},"GR":{"Snacks":1.43},"LA":{"Snacks":7.82},"MA":{"Snacks":2.06},"ML":{"Snacks":7.55},"MN":{"Snacks":4.99},"NB":{"Snacks":11.89},"TR":{"Snacks":17.79},"UA":{"Snacks":21.6}},"zone_inv":{"AP":2,"BV":2,"GHY":3,"GR":1,"LA":3,"MA":1,"ML":4,"MN":2,"NB":5,"TR":7,"UA":9}}},"Water":{"Feb-26":{"rev":131.81,"qty":3678432,"inv":222,"cat":{"Water":131.81},"state":{"ASSAM":81.35,"Arunachal Pradesh":7.71,"Manipur":2.97,"Meghalaya":11.87,"Nagaland":2.97,"TRIPURA":24.94},"zone":{"AP":7.71,"BV":11.87,"GHY":11.87,"GR":6.53,"LA":16.61,"MA":10.15,"ML":5.34,"MN":2.97,"NB":18.39,"NL":2.97,"TR":24.94,"UA":12.46},"div":{"Water":131.81},"sku":{"SUREWATER BY INDEPENDENCE 500ML (494759378)":131.81},"dist":{"A-ONE MARKETING":{"r":0.59,"i":1,"p":"Rangapara"},"AADHYA ENTERPRISE":{"r":0.59,"i":1,"p":"Maligaon"},"Aadhya Enterprise":{"r":1.78,"i":3,"p":"Maligaon"},"Anil Saha & Sons":{"r":1.78,"i":3,"p":"Bara Bazar"},"Antara Store":{"r":1.85,"i":3,"p":"Lumding"},"B.M. ENTERPRISE":{"r":1.19,"i":2,"p":"Tezpur"},"B.Y. Enterprise":{"r":0.59,"i":1,"p":"Daporijo"},"Balaji Store":{"r":0.59,"i":1,"p":"Jagiroad"},"Balaji Trading":{"r":1.78,"i":3,"p":"Guwahati"},"Bhai Bhai Enterprise":{"r":0.59,"i":1,"p":"Bongaigaon"},"Bikauram Kamalapuri and Company":{"r":1.19,"i":2,"p":"Naharkatiya"},"Bornali Store":{"r":0.59,"i":1,"p":"Kanchanpur"},"CHOWDHURY BROTHERS":{"r":0.59,"i":1,"p":"Basugaon"},"Chatra Bandhu":{"r":1.19,"i":2,"p":"Biswanath Chariali"},"Choudhary Marketing Agency":{"r":4.15,"i":7,"p":"Gohpur"},"D.M Enterprise":{"r":1.19,"i":2,"p":"Pathsala"},"DUTTA BHANDAR":{"r":0.59,"i":1,"p":"Dhubri"},"ELMER VENTURES":{"r":0.59,"i":1,"p":"Dimapur"},"G.K TRADERS":{"r":0.59,"i":1,"p":"Kharupetia"},"GOLDEN STONE CARRIER":{"r":0.59,"i":1,"p":"Byrnihut"},"GOSWAMI ENTERPRISE":{"r":0.59,"i":1,"p":"Beltola"},"Ganapati Agency":{"r":1.19,"i":2,"p":"Goreswar"},"Geeta Marketing":{"r":1.19,"i":2,"p":"Barpeta Road"},"Ghosh Enterprise":{"r":0.59,"i":1,"p":"Bijni"},"Green India":{"r":7.71,"i":13,"p":"Karimganj"},"Gunajit Das":{"r":1.78,"i":3,"p":"Udalguri"},"Hiyya Riya Store":{"r":1.19,"i":2,"p":"Nalbari"},"JOY GURU STORE":{"r":1.78,"i":3,"p":"Ambassa"},"Kalyani Enterprise":{"r":2.37,"i":4,"p":"Majuli"},"Kamakhya Enterprise":{"r":1.78,"i":3,"p":"Mirza"},"Kamdhenu Traders":{"r":4.15,"i":7,"p":"Hojai"},"Kumkum Enterprise":{"r":1.78,"i":3,"p":"Khliehriat"},"LERING BAGANG TRADER":{"r":1.19,"i":2,"p":"Seppa"},"Lakhdatar Enterprise":{"r":1.78,"i":3,"p":"Dibrugarh"},"Laxminarayan Stores - Dhekiajuli":{"r":1.78,"i":3,"p":"Dhekiajuli"},"M.J.M Store":{"r":1.19,"i":2,"p":"Bilasipara"},"MAA BHAGAWATI ENTERPRISE":{"r":1.78,"i":3,"p":"Sivasagar"},"MAHADEV SAHA & SONS":{"r":2.97,"i":5,"p":"Haldiyaganj"},"MAHAVIRA AGENCY":{"r":1.78,"i":3,"p":"Kalacherra Road"},"Maa Kali Store":{"r":0.59,"i":1,"p":"DARRANGIRI"},"Mahadev Stone Crusher":{"r":2.37,"i":4,"p":"Changsari"},"Mahato Store":{"r":2.37,"i":4,"p":"Bakalia"},"Mayabini Enterprise":{"r":2.37,"i":4,"p":"Barpeta"},"N. R. ENTERPRISES":{"r":2.97,"i":5,"p":"Manipur"},"NEHA TRADING":{"r":1.19,"i":2,"p":"Dhemaji"},"NV DISTRIBUTOR":{"r":2.37,"i":4,"p":"Moranhat"},"Nikita Iron Industries - Mankachar":{"r":1.78,"i":3,"p":"Mankachar"},"PASUPATI COMMUNICATION":{"r":2.37,"i":4,"p":"Dhubri"},"PRANJAY ENTERPRISE":{"r":0.59,"i":1,"p":"Ulubari"},"Prakash Deep Enterprise":{"r":0.59,"i":1,"p":"Bara Bazar"},"R K Traders":{"r":0.59,"i":1,"p":"Beltola"},"RED CHILLI":{"r":0.58,"i":1,"p":"Barpeta"},"Rahul Prasad":{"r":4.75,"i":8,"p":"Tura"},"Ramkrishna Bhandar":{"r":1.19,"i":2,"p":"Rowta"},"S S BROTHERS STORE":{"r":2.37,"i":4,"p":"Darrang"},"S.K STORE":{"r":1.19,"i":2,"p":"Dawki"},"SABITA TREDARS":{"r":1.19,"i":2,"p":"Manughat"},"SANTOSHI MAA ENTERPRISE":{"r":2.37,"i":4,"p":"Kumarghat"},"SARADAMONI":{"r":1.2,"i":2,"p":"Gandachara"},"SHREE BALAJI DISTRIBUTORS":{"r":1.19,"i":2,"p":"Nagaon"},"SIANG TRADERS":{"r":1.19,"i":2,"p":"West Siang"},"SIMNA ENTERPRISES":{"r":0.59,"i":1,"p":"Athgaon"},"SIVAM TRADERS":{"r":0.59,"i":1,"p":"Goreswar"},"SLB ENTERPRISE":{"r":0.59,"i":1,"p":"Silapathar"},"SUMAN PAUL":{"r":2.37,"i":4,"p":"Agartala"},"SURYA ENTERPRISE":{"r":1.19,"i":2,"p":"Naharlagun"},"Saanvi Enterprise":{"r":3.56,"i":6,"p":"Teliamura"},"Sayanshi Marketing":{"r":0.59,"i":1,"p":"Guwahati"},"Sheetal Enterprise":{"r":1.19,"i":2,"p":"Dibrugarh"},"Shree Khatu Shyam Enterprises":{"r":0.59,"i":1,"p":"Dhemaji"},"Siddhi Vinayak Marketing":{"r":1.19,"i":2,"p":"Tinsukia"},"Snigdha Varities":{"r":2.97,"i":5,"p":"Kailashahar"},"Subhash Das & Brothers":{"r":1.78,"i":3,"p":"Baghmara"},"TMY Enterprises":{"r":0.59,"i":1,"p":"Dumporijo"},"Tapati Traders":{"r":7.12,"i":12,"p":"Dharmanagar"},"Tele Point":{"r":1.19,"i":2,"p":"Mazbat"},"Tullah Enterprise":{"r":0.59,"i":1,"p":"Margherita"},"WAN ENTERPRISE":{"r":2.37,"i":4,"p":"Dimapur"},"Zainab Enterprise":{"r":4.15,"i":7,"p":"Hailakandi,"}},"zone_cat":{"AP":{"Water":7.71},"BV":{"Water":11.87},"GHY":{"Water":11.87},"GR":{"Water":6.53},"LA":{"Water":16.61},"MA":{"Water":10.15},"ML":{"Water":5.34},"MN":{"Water":2.97},"NB":{"Water":18.39},"NL":{"Water":2.97},"TR":{"Water":24.94},"UA":{"Water":12.46}},"zone_state":{"AP":{"Arunachal Pradesh":7.71},"BV":{"ASSAM":11.87},"GHY":{"ASSAM":11.87},"GR":{"Meghalaya":6.53},"LA":{"ASSAM":16.61},"MA":{"ASSAM":10.15},"ML":{"Meghalaya":5.34},"MN":{"Manipur":2.97},"NB":{"ASSAM":18.39},"NL":{"Nagaland":2.97},"TR":{"TRIPURA":24.94},"UA":{"ASSAM":12.46}},"zone_div":{"AP":{"Water":7.71},"BV":{"Water":11.87},"GHY":{"Water":11.87},"GR":{"Water":6.53},"LA":{"Water":16.61},"MA":{"Water":10.15},"ML":{"Water":5.34},"MN":{"Water":2.97},"NB":{"Water":18.39},"NL":{"Water":2.97},"TR":{"Water":24.94},"UA":{"Water":12.46}},"zone_inv":{"AP":13,"BV":20,"GHY":20,"GR":11,"LA":28,"MA":17,"ML":9,"MN":5,"NB":31,"NL":5,"TR":42,"UA":21}},"Mar-26":{"rev":143.37,"qty":3810360,"inv":247,"cat":{"Water":143.37},"state":{"ASSAM":87.62,"Arunachal Pradesh":8.31,"Manipur":3.92,"Meghalaya":8.07,"Nagaland":2.89,"TRIPURA":32.56},"zone":{"AP":8.31,"BV":7.64,"GHY":7.56,"GR":3.56,"LA":14.24,"MA":9.42,"ML":4.51,"MN":3.92,"NB":34.02,"NL":2.89,"TR":32.56,"UA":14.76},"div":{"Water":143.37},"sku":{"SUREWATER BY CAMPA 500ML (494590017)":58.15,"SUREWATER BY INDEPENDENCE 1LTR (494759379)":16.46,"SUREWATER BY INDEPENDENCE 500ML (494759378)":68.75},"dist":{"A-ONE MARKETING":{"r":1.19,"i":2,"p":"Rangapara"},"Akriti Enterprise":{"r":1.78,"i":3,"p":"Jonai"},"Anil Saha & Sons":{"r":0.59,"i":1,"p":"Bara Bazar"},"Antara Store":{"r":0.59,"i":1,"p":"Lumding"},"B.M. Enterprise":{"r":6.53,"i":11,"p":"Tezpur"},"BALAJI TRADING":{"r":2.29,"i":4,"p":"Baihata Chariali"},"Balajee Enterprises":{"r":1.19,"i":2,"p":"Guwahati"},"Bhardwaj Brothers & Associates":{"r":0.59,"i":1,"p":"Bonda"},"Bornali Store":{"r":0.51,"i":1,"p":"Kanchanpur"},"CHOWDHURY BROTHERS":{"r":1.19,"i":2,"p":"Basugaon"},"Choudhary Marketing Agency":{"r":5.93,"i":11,"p":"Gohpur"},"D.M Enterprise":{"r":0.59,"i":1,"p":"Pathsala"},"DUTTA BHANDAR":{"r":0.59,"i":1,"p":"Dhubri"},"ELMER VENTURES":{"r":1.11,"i":2,"p":"Dimapur"},"GALAXY ENTERPRISES":{"r":0.59,"i":1,"p":"Chumukdima"},"GOLDEN STONE CARRIER":{"r":1.78,"i":3,"p":"Byrnihut"},"Ganapati Agency":{"r":0.59,"i":1,"p":"Goreswar"},"Ganesh Store":{"r":0.59,"i":1,"p":"Lakhipur"},"Geeta Marketing":{"r":0.59,"i":1,"p":"Barpeta Road"},"Ghosh Enterprise":{"r":0.59,"i":1,"p":"Bijni"},"Green India":{"r":1.7,"i":3,"p":"Karimganj"},"Gunajit Das":{"r":1.19,"i":2,"p":"Udalguri"},"Hiyya Riya Store":{"r":0.59,"i":1,"p":"Nalbari"},"KRISHAV TRADERS":{"r":1.78,"i":3,"p":"Mankachar"},"Kalita and Son Traders":{"r":3.56,"i":6,"p":"Nalbari"},"Kalyani Enterprise":{"r":2.37,"i":4,"p":"Majuli"},"Kamakhya Enterprise":{"r":0.59,"i":1,"p":"Mirza"},"Kamdhenu Traders":{"r":4.67,"i":8,"p":"Hojai"},"Kumkum Enterprise":{"r":1.19,"i":2,"p":"Khliehriat"},"LERING BAGANG TRADER":{"r":2.97,"i":5,"p":"Seppa"},"Lakhdatar Enterprise":{"r":0.59,"i":1,"p":"Dibrugarh"},"Laxminarayan Stores - Dhekiajuli":{"r":1.19,"i":2,"p":"Dhekiajuli"},"M.J.M Store":{"r":0.59,"i":1,"p":"Bilasipara"},"MAHADEV SAHA & SONS":{"r":2.97,"i":5,"p":"Haldiyaganj"},"MAHAVIRA AGENCY":{"r":6.37,"i":11,"p":"Kalacherra Road"},"MEGHALAYA TRADING":{"r":1.19,"i":2,"p":"khliehriat"},"Mahato Store":{"r":2.37,"i":4,"p":"Bakalia"},"N. R. ENTERPRISES":{"r":1.54,"i":3,"p":"Manipur"},"NEHA TRADING":{"r":4.67,"i":8,"p":"Dhemaji"},"NV DISTRIBUTOR":{"r":1.78,"i":3,"p":"Moranhat"},"Om Bhander":{"r":0.51,"i":1,"p":"Tangla"},"P.H. Enterprise":{"r":1.19,"i":2,"p":"Duliajan"},"PASUPATI COMMUNICATION":{"r":0.59,"i":1,"p":"Dhubri"},"Poddar Associates":{"r":0.59,"i":1,"p":"Tangla"},"Prakash Deep Enterprise":{"r":1.54,"i":3,"p":"Bara Bazar"},"R K Traders":{"r":0.59,"i":1,"p":"Beltola"},"R.N. Trading Company":{"r":1.19,"i":2,"p":"Chabua"},"RAMKUMAR CHANDRATAN":{"r":1.78,"i":3,"p":"Lakhimpur"},"RED CHILLI":{"r":0.59,"i":1,"p":"Barpeta"},"RUMI ENTERPRISE":{"r":1.19,"i":2,"p":"Kalaigaon"},"RUNU BEGAM":{"r":4.07,"i":7,"p":"Kailashahar"},"Rahul Prasad":{"r":2.97,"i":5,"p":"Tura"},"Ramkrishna Bhandar":{"r":2.81,"i":5,"p":"Rowta"},"S S BROTHERS STORE":{"r":1.11,"i":2,"p":"Darrang"},"SANTOSHI MAA ENTERPRISE":{"r":1.11,"i":2,"p":"Kumarghat"},"SHREE BALAJI DISTRIBUTORS":{"r":1.78,"i":3,"p":"Nagaon"},"SIVAM TRADERS":{"r":1.19,"i":2,"p":"Goreswar"},"SLB ENTERPRISE":{"r":1.78,"i":3,"p":"Silapathar"},"STS Enterprise":{"r":0.59,"i":1,"p":"Imphal"},"STS Enterprises":{"r":1.78,"i":3,"p":"Imphal"},"SUMAN PAUL":{"r":5.18,"i":9,"p":"Agartala"},"SURYA ENTERPRISE":{"r":1.78,"i":3,"p":"Naharlagun"},"Saanvi Enterprise":{"r":2.22,"i":4,"p":"Teliamura"},"Sampawati Enterprise":{"r":0.59,"i":1,"p":"BORHOLLA"},"Sheetal Enterprise":{"r":3.56,"i":6,"p":"Dibrugarh"},"Shivnarayan SushilKumar":{"r":0.51,"i":1,"p":"Tinsukia"},"Siddhi Vinayak Marketing":{"r":1.78,"i":3,"p":"Tinsukia"},"Snigdha Varities":{"r":7.12,"i":12,"p":"Kailashahar"},"Subhash Das & Brothers":{"r":0.59,"i":1,"p":"Baghmara"},"Surabhi Store":{"r":0.59,"i":1,"p":"Tamulpur"},"TMY Enterprises":{"r":0.59,"i":1,"p":"Dumporijo"},"Tapati Traders":{"r":5.98,"i":11,"p":"Dharmanagar"},"Tele Point":{"r":1.78,"i":3,"p":"Mazbat"},"Tullah Enterprise":{"r":1.19,"i":2,"p":"Margherita"},"WAN ENTERPRISE":{"r":1.19,"i":2,"p":"Dimapur"},"Xpress Trading":{"r":0.51,"i":1,"p":"Guwahati"},"Zainab Enterprise":{"r":5.93,"i":10,"p":"Hailakandi,"}},"zone_cat":{"AP":{"Water":8.31},"BV":{"Water":7.64},"GHY":{"Water":7.56},"GR":{"Water":3.56},"LA":{"Water":14.24},"MA":{"Water":9.42},"ML":{"Water":4.51},"MN":{"Water":3.92},"NB":{"Water":34.02},"NL":{"Water":2.89},"TR":{"Water":32.56},"UA":{"Water":14.76}},"zone_state":{"AP":{"Arunachal Pradesh":8.31},"BV":{"ASSAM":7.64},"GHY":{"ASSAM":7.56},"GR":{"Meghalaya":3.56},"LA":{"ASSAM":14.24},"MA":{"ASSAM":9.42},"ML":{"Meghalaya":4.51},"MN":{"Manipur":3.92},"NB":{"ASSAM":34.02},"NL":{"Nagaland":2.89},"TR":{"TRIPURA":32.56},"UA":{"ASSAM":14.76}},"zone_div":{"AP":{"Water":8.31},"BV":{"Water":7.64},"GHY":{"Water":7.56},"GR":{"Water":3.56},"LA":{"Water":14.24},"MA":{"Water":9.42},"ML":{"Water":4.51},"MN":{"Water":3.92},"NB":{"Water":34.02},"NL":{"Water":2.89},"TR":{"Water":32.56},"UA":{"Water":14.76}},"zone_inv":{"AP":14,"BV":13,"GHY":13,"GR":6,"LA":24,"MA":16,"ML":8,"MN":7,"NB":59,"NL":5,"TR":57,"UA":25}}}},"WB":{"Bev":{},"Foods":{"Feb-26":{"rev":22.43,"qty":531304,"inv":12,"cat":{"Brown Noodles":4.91,"Condiments":2.73,"Spreads":0.65,"White Noodles":14.14},"state":{"West Bengal":22.43},"zone":{"WB":22.43},"div":{"Foods":22.43},"sku":{"SIL CHOW CHOW NOODLES CHKN 50G":1.24,"SIL CHOW CHOW NOODLES VEG 50G":0.82,"SIL INSTANT NOODLES MASALA 25G":12.37,"SIL INSTANT NOODLES MASALA 55G":1.77,"SIL MIXED FRUIT JAM 100G TUB":0.65,"SIL TOMATO KETCHUP 425G PCH":0.87,"SIL TOMATO KETCHUP 850G PCH":1.34,"SIL TOMATO KETCHUP 8G SACHET":0.12,"SIL TOMATO KETCHUP 90G PCH":0.41,"SNTC MINI CHKN NDLS 25G":2.85},"dist":{"Aditya Agency":{"r":2.95,"i":3,"p":"CHINSURAH"},"HALDER TRADERS":{"r":2.35,"i":1,"p":"KHOLAPOTA"},"Kaushani Enterprise":{"r":1.96,"i":2,"p":"Kolkata"},"Maa Kali Enterprise":{"r":2.0,"i":1,"p":"Murshidabad"},"Mona Enterprise":{"r":3.3,"i":2,"p":"Berhampore"},"Sri P.R. Trading Company":{"r":4.91,"i":1,"p":"Siliguri"},"VISHNU TRADERS":{"r":4.96,"i":2,"p":"WEST RANGAMATIA"}},"zone_cat":{"WB":{"Brown Noodles":4.91,"Condiments":2.73,"Spreads":0.65,"White Noodles":14.14}},"zone_state":{"WB":{"West Bengal":22.43}},"zone_div":{"WB":{"Foods":22.43}},"zone_inv":{"WB":12}},"Mar-26":{"rev":2.64,"qty":69856,"inv":3,"cat":{"Condiments":0.61,"Spreads":0.03,"White Noodles":1.99},"state":{"West Bengal":2.64},"zone":{"WB":2.64},"div":{"Foods":2.64},"sku":{"SIL INSTANT NOODLES MASALA 25G":1.99,"SIL MIXED FRUIT JAM 100G TUB":0.03,"SIL TOMATO KETCHUP 425G PCH":0.19,"SIL TOMATO KETCHUP 850G PCH":0.25,"SIL TOMATO KETCHUP 8G SACHET":0.07,"SIL TOMATO KETCHUP 90G PCH":0.11},"dist":{"HALDER TRADERS":{"r":0.65,"i":1,"p":"KHOLAPOTA"},"VISHNU TRADERS":{"r":1.99,"i":2,"p":"WEST RANGAMATIA"}},"zone_cat":{"WB":{"Condiments":0.61,"Spreads":0.03,"White Noodles":1.99}},"zone_state":{"WB":{"West Bengal":2.64}},"zone_div":{"WB":{"Foods":2.64}},"zone_inv":{"WB":3}}},"Snacks":{"Nov-25":{"rev":2.63,"qty":64200,"inv":1,"cat":{"Fryums":0.27,"Namkeen":0.33,"Potato Chips":2.03},"state":{"West Bengal":2.63},"zone":{"WB":2.63},"div":{"Snacks":2.63},"sku":{"ALANS FC PC CLSSLT RS10":0.09,"ALANS PIPES SLT RS5":0.27,"ALANS RC PC CO RS10":0.19,"ALANS RC PC CO RS5":1.06,"ALANS RC PC TMT RS10":0.19,"ALANS RC PC TMT RS5":0.5,"MASTI OYE NMKN KHTA METHA RS5":0.13,"MASTI OYE NMKN SV BHJIA RS5":0.2},"dist":{"Maa Laxmi Enterprise":{"r":2.63,"i":1,"p":"ALIPURDUAR"}},"zone_cat":{"WB":{"Fryums":0.27,"Namkeen":0.33,"Potato Chips":2.03}},"zone_state":{"WB":{"West Bengal":2.63}},"zone_div":{"WB":{"Snacks":2.63}},"zone_inv":{"WB":1}},"Dec-25":{"rev":20.08,"qty":497160,"inv":6,"cat":{"Extruded":2.55,"Fryums":2.8,"Namkeen":5.47,"Potato Chips":9.25},"state":{"West Bengal":20.08},"zone":{"WB":20.08},"div":{"Snacks":20.08},"sku":{"ALANS CHTKL MSL RS5":2.55,"ALANS FC PC CLSSLT RS10":0.76,"ALANS FC PC CLSSLT RS5":1.34,"ALANS NOODLES RS5":1.6,"ALANS PIPES SLT RS5":1.2,"ALANS RC PC CO RS10":0.85,"ALANS RC PC CO RS5":2.05,"ALANS RC PC MSL RS10":0.76,"ALANS RC PC MSL RS5":1.59,"ALANS RC PC TMT RS10":0.76,"ALANS RC PC TMT RS5":1.15,"MASTI OYE NMKN ALO BHJIA RS5":0.8,"MASTI OYE NMKN KHTA METHA RS5":0.8,"MASTI OYE NMKN NVRTN MIX RS5":0.73,"MASTI OYE NMKN PNJBI TDKA RS5":0.39,"MASTI OYE NMKN SV BHJIA RS5":1.48,"MASTI OYE NMKN TSTY PENTS RS5":1.27},"dist":{"Jai Matadi Enterprise":{"r":2.96,"i":1,"p":"New Alipur(Kolkata South1)"},"Maa Laxmi Enterprise":{"r":6.44,"i":2,"p":"ALIPURDUAR"},"Sri P.R. Trading Company":{"r":7.98,"i":2,"p":"Siliguri"},"Subarna Variety":{"r":2.7,"i":1,"p":"Nishiganj"}},"zone_cat":{"WB":{"Extruded":2.55,"Fryums":2.8,"Namkeen":5.47,"Potato Chips":9.25}},"zone_state":{"WB":{"West Bengal":20.08}},"zone_div":{"WB":{"Snacks":20.08}},"zone_inv":{"WB":6}},"Jan-26":{"rev":47.38,"qty":1215984,"inv":15,"cat":{"Extruded":4.61,"Fryums":6.78,"Namkeen":8.78,"Potato Chips":27.21},"state":{"West Bengal":47.38},"zone":{"WB":47.38},"div":{"Snacks":47.38},"sku":{"ALANS CHTKL MSL RS5":4.61,"ALANS FC PC CLSSLT RS10":1.02,"ALANS FC PC CLSSLT RS5":4.23,"ALANS NOODLES RS5":1.8,"ALANS PIPES SLT RS5":4.98,"ALANS RC PC CO RS10":1.54,"ALANS RC PC CO RS5":8.68,"ALANS RC PC MSL RS10":1.19,"ALANS RC PC MSL RS5":4.39,"ALANS RC PC TMT RS10":1.06,"ALANS RC PC TMT RS5":5.11,"MASTI OYE NMKN ALO BHJIA RS5":1.41,"MASTI OYE NMKN KHTA METHA RS5":0.99,"MASTI OYE NMKN NVRTN MIX RS5":1.05,"MASTI OYE NMKN PNJBI TDKA RS5":1.37,"MASTI OYE NMKN SV BHJIA RS5":1.91,"MASTI OYE NMKN TSTY PENTS RS5":2.04},"dist":{"Aditya Enterprise":{"r":3.28,"i":1,"p":"GHOLA"},"Aishani Enterprise":{"r":3.06,"i":1,"p":"Hooghly"},"Ankit Trading Company":{"r":2.9,"i":1,"p":"Kolkata"},"Annapurna Distribution House":{"r":3.26,"i":1,"p":"Sonarpur"},"Bimal Kumar Patwari":{"r":2.99,"i":1,"p":"Katwa"},"Goutam Ganguly":{"r":3.23,"i":1,"p":"TARAKESWAR"},"KDST Enterprises LLP":{"r":3.18,"i":1,"p":"Howrah"},"KSB Enterprise":{"r":3.2,"i":1,"p":"Dastipara,"},"Loknath Agency":{"r":3.23,"i":1,"p":"Dhupguri"},"Maa Kali Enterprise":{"r":2.81,"i":1,"p":"Murshidabad"},"Makali Enterprise":{"r":3.18,"i":1,"p":"EGRA"},"Manu Enterprise":{"r":3.18,"i":1,"p":"KULGACHIA"},"Reliable Agency":{"r":3.47,"i":1,"p":"Krishnanagar"},"Samadder Enterprise":{"r":3.25,"i":1,"p":"Nadia"},"Shreedhar Agency":{"r":3.17,"i":1,"p":"Moynapur,Bishnipur"}},"zone_cat":{"WB":{"Extruded":4.61,"Fryums":6.78,"Namkeen":8.78,"Potato Chips":27.21}},"zone_state":{"WB":{"West Bengal":47.38}},"zone_div":{"WB":{"Snacks":47.38}},"zone_inv":{"WB":15}},"Feb-26":{"rev":34.58,"qty":921432,"inv":12,"cat":{"Extruded":3.71,"Fryums":3.3,"Namkeen":4.54,"Potato Chips":23.03},"state":{"West Bengal":34.58},"zone":{"WB":34.58},"div":{"Snacks":34.58},"sku":{"ALANS CHTKL MSL RS5":3.43,"ALANS FC PC CLSSLT RS10":0.75,"ALANS FC PC CLSSLT RS5":3.08,"ALANS NOODLES RS5":1.25,"ALANS PIPES SLT RS5":2.05,"ALANS RC PC CO RS10":0.78,"ALANS RC PC CO RS5":7.64,"ALANS RC PC MSL RS10":0.52,"ALANS RC PC MSL RS5":3.56,"ALANS RC PC TMT RS10":0.63,"ALANS RC PC TMT RS5":6.06,"ALANS RINGS TOM TOY RS5":0.28,"MASTI OYE NMKN ALO BHJIA RS5":0.34,"MASTI OYE NMKN KHTA METHA RS5":0.2,"MASTI OYE NMKN NVRTN MIX RS5":0.56,"MASTI OYE NMKN PNJBI TDKA RS5":1.32,"MASTI OYE NMKN SV BHJIA RS5":0.98,"MASTI OYE NMKN TSTY PENTS RS5":1.13},"dist":{"Ghosh Enterprise":{"r":2.75,"i":1,"p":"BONGAON"},"Maa Laxmi Enterprise":{"r":2.24,"i":1,"p":"ALIPURDUAR"},"Mohata Stores":{"r":2.9,"i":1,"p":"DINHATA"},"Ramkrishna Enterprise":{"r":2.85,"i":1,"p":"Bankura"},"Reliable Agency":{"r":2.66,"i":1,"p":"Krishnanagar"},"SURABHI ENTERPRISE":{"r":2.73,"i":1,"p":"ISLAMPUR"},"Shreedhar Agency":{"r":2.74,"i":1,"p":"Moynapur,Bishnipur"},"Sinha Enterprise":{"r":2.87,"i":1,"p":"MALDA"},"Sri P.R. Trading Company":{"r":7.14,"i":2,"p":"Siliguri"},"TGT Enterprise":{"r":5.7,"i":2,"p":"Raiganj"}},"zone_cat":{"WB":{"Extruded":3.71,"Fryums":3.3,"Namkeen":4.54,"Potato Chips":23.03}},"zone_state":{"WB":{"West Bengal":34.58}},"zone_div":{"WB":{"Snacks":34.58}},"zone_inv":{"WB":12}},"Mar-26":{"rev":20.44,"qty":590040,"inv":8,"cat":{"Extruded":3.05,"Fryums":3.15,"Namkeen":2.83,"Potato Chips":11.42},"state":{"West Bengal":20.44},"zone":{"WB":20.44},"div":{"Snacks":20.44},"sku":{"ALANS CHTKL MSL RS5":2.65,"ALANS FC PC CLSSLT RS15":0.02,"ALANS FC PC CLSSLT RS5":1.41,"ALANS NOODLES RS5":1.46,"ALANS PIPES SLT RS5":1.69,"ALANS RC PC CO RS10":0.09,"ALANS RC PC CO RS15":0.02,"ALANS RC PC CO RS5":4.38,"ALANS RC PC CO RS50":0.02,"ALANS RC PC MSL RS10":0.03,"ALANS RC PC MSL RS15":0.02,"ALANS RC PC MSL RS5":1.62,"ALANS RC PC MSL RS50":0.02,"ALANS RC PC TMT RS10":0.06,"ALANS RC PC TMT RS15":0.02,"ALANS RC PC TMT RS5":3.69,"ALANS RC PC TMT RS50":0.02,"ALANS RINGS TOM TOY RS5":0.4,"MASTI OYE NMKN ALO BHJIA RS5":0.64,"MASTI OYE NMKN ALO BHJIA RS60":0.01,"MASTI OYE NMKN KHTA METHA RS5":0.46,"MASTI OYE NMKN NVRTN MIX RS5":0.33,"MASTI OYE NMKN PNJBI TDKA RS5":0.35,"MASTI OYE NMKN SV BHJIA RS5":0.54,"MASTI OYE NMKN TSTY PENTS RS5":0.49},"dist":{"Aditya Enterprise":{"r":2.47,"i":1,"p":"GHOLA"},"Goutam Ganguly":{"r":2.71,"i":1,"p":"TARAKESWAR"},"KSB Enterprise":{"r":2.77,"i":1,"p":"Dastipara,"},"Maa Laxmi Enterprise":{"r":4.56,"i":2,"p":"ALIPURDUAR"},"PRASAD ENTERPRISE":{"r":2.78,"i":1,"p":"Cooch Behar"},"TGT Enterprise":{"r":2.17,"i":1,"p":"Raiganj"},"Tirupati Enterprise":{"r":2.99,"i":1,"p":"Harishchandrapur"}},"zone_cat":{"WB":{"Extruded":3.05,"Fryums":3.15,"Namkeen":2.83,"Potato Chips":11.42}},"zone_state":{"WB":{"West Bengal":20.44}},"zone_div":{"WB":{"Snacks":20.44}},"zone_inv":{"WB":8}}},"Water":{"Feb-26":{"rev":1.12,"qty":29376,"inv":2,"cat":{"Water":1.12},"state":{"West Bengal":1.12},"zone":{"WB":1.12},"div":{"Water":1.12},"sku":{"SUREWATER BY INDEPENDENCE 500ML (494759378)":1.12},"dist":{"Sri P.R. Trading Company":{"r":1.12,"i":2,"p":"Siliguri"}},"zone_cat":{"WB":{"Water":1.12}},"zone_state":{"WB":{"West Bengal":1.12}},"zone_div":{"WB":{"Water":1.12}},"zone_inv":{"WB":2}},"Mar-26":{"rev":1.03,"qty":16800,"inv":2,"cat":{"Water":1.03},"state":{"West Bengal":1.03},"zone":{"WB":1.03},"div":{"Water":1.03},"sku":{"SUREWATER BY INDEPENDENCE 1LTR (494759379)":1.03},"dist":{"Sri P.R. Trading Company":{"r":1.03,"i":2,"p":"Siliguri"}},"zone_cat":{"WB":{"Water":1.03}},"zone_state":{"WB":{"West Bengal":1.03}},"zone_div":{"WB":{"Water":1.03}},"zone_inv":{"WB":2}}}}},"distZone":{"A-ONE MARKETING":"NB","AADHYA ENTERPRISE":"GHY","ABA Commerce Inspirations":"BV","Aadhya Enterprise":"GHY","Aara Trade Associates":"BV","Aditya Agency":"WB","Aditya Enterprise":"WB","Aishani Enterprise":"WB","Akriti Enterprise":"NB","Amit and Sons":"ML","Anil Saha & Sons":"ML","Ankit Trading Company":"WB","Annapurna Distribution House":"WB","Antara Store":"MA","Ayush Trading":"MA","B.C. Paul":"UA","B.M. ENTERPRISE":"NB","B.M. Enterprise":"NB","B.Y. Enterprise":"AP","BALAJI TRADING":"GHY","Balabux Dhanraj":"LA","Balajee Enterprises":"GHY","Balaji Store":"MA","Balaji Trading":"GHY","Bee Enterprise":"GHY","Bhai Bhai Enterprise":"LA","Bhardwaj Brothers & Associates":"GHY","Bikauram Kamalapuri and Company":"UA","Bimal Kumar Patwari":"WB","Bornali Store":"TR","C H ENTERPRISE":"LA","CHOWDHURY BROTHERS":"LA","Chatra Bandhu":"NB","Choudhary Marketing Agency":"NB","D New Stores":"LA","D.M Enterprise":"LA","D.M. Enterprise":"LA","D.S. Store":"GHY","DSS Traders":"LA","DUTTA BHANDAR":"LA","ELMER VENTURES":"NL","G.K TRADERS":"NB","GALAXY ENTERPRISES":"NL","GOLDEN STONE CARRIER":"GHY","GOSWAMI ENTERPRISE":"GHY","Ganapati Agency":"LA","Ganesh Enterprise":"NB","Ganesh Store":"LA","Geeta Marketing":"LA","Ghosh Enterprise":"WB","Goodwill Enterprise":"GHY","Goutam Ganguly":"WB","Green India":"BV","Gunajit Das":"NB","Gurudeb Agency":"TR","HALDER TRADERS":"WB","HANUMAN BHANDAR":"NB","Hazarika Store":"UA","Hiyya Riya Store":"LA","JOY GURU STORE":"TR","Jai Matadi Enterprise":"WB","KDST Enterprises LLP":"WB","KRISHAV TRADERS":"LA","KSB Enterprise":"WB","Kalita and Son Traders":"LA","Kalyani Enterprise":"UA","Kamakhya Enterprise":"GHY","Kamdhenu Traders":"MA","Kaushani Enterprise":"WB","Kesari":"UA","Khatu Shyam Enterprise":"UA","Kumkum Enterprise":"ML","LERING BAGANG TRADER":"AP","Lakhdatar Enterprise":"UA","Laxminarayan Stores - Dhekiajuli":"NB","Lering Bagang Trader":"AP","Lisa Enterprise":"NB","Loknath Agency":"WB","M.J.M Store":"LA","MAA BHAGAWATI ENTERPRISE":"UA","MAHADEV SAHA & SONS":"AP","MAHAVIRA AGENCY":"TR","MEGHALAYA TRADING":"ML","Maa Bageswari Store":"LA","Maa Bhagawati Enterprise":"UA","Maa Enterprise":"TR","Maa Kali Enterprise":"NB","Maa Kali Store":"LA","Maa Laxmi Enterprise":"WB","Mahadeb Bhander":"TR","Mahadev Stone Crusher":"GHY","Mahato Store":"MA","Makali Enterprise":"WB","Manik Chandra Roy":"LA","Manju Store":"UA","Manu Enterprise":"WB","Mausam Kalita":"GHY","Mayabini Enterprise":"LA","Mohata Stores":"WB","Mona Enterprise":"WB","N. R. ENTERPRISES":"MN","N.C. Enterprise":"NB","NEHA TRADING":"NB","NV DISTRIBUTOR":"UA","NV Distributor":"UA","Netram Kanhaiyalall":"LA","Nikita Iron Industries - Mankachar":"LA","Om Bhander":"NB","P.H. Enterprise":"UA","PASUPATI COMMUNICATION":"LA","PJ Enterprise":"UA","PRANJAY ENTERPRISE":"GHY","PRASAD ENTERPRISE":"WB","Pema Enterprise":"AP","Poddar Associates":"NB","Prakash Deep Enterprise":"ML","R K P Traders":"MN","R K Traders":"GHY","R.B.ENTERPRISES":"UA","R.N. Trading Company":"UA","R.S. Marketing":"UA","RAGHABENDRA DUTTACHOUDHURY":"BV","RAMKUMAR CHANDRATAN":"NB","RED CHILLI":"LA","RUMI ENTERPRISE":"NB","RUNU BEGAM":"TR","Rahul Prasad":"GR","Ramkrishna Bhandar":"NB","Ramkrishna Enterprise":"WB","Ramthakur Agency":"TR","Reliable Agency":"WB","Rubi Enterprise":"LA","S Majaw Store":"ML","S S BROTHERS STORE":"NB","S.D. Store":"LA","S.K STORE":"ML","S.T. Enterprise":"NB","SABITA TREDARS":"TR","SANTOSHI MAA ENTERPRISE":"TR","SARADAMONI":"TR","SHREE BALAJI DISTRIBUTORS":"MA","SIANG TRADERS":"AP","SIMNA ENTERPRISES":"GHY","SIVAM TRADERS":"LA","SLB ENTERPRISE":"NB","STS Enterprise":"MN","STS Enterprises":"MN","SUMAN PAUL":"TR","SURABHI ENTERPRISE":"WB","SURYA ENTERPRISE":"AP","Saanvi Enterprise":"TR","Saha Bhandar & Sons":"LA","Sales Promotion":"HO","Samadder Enterprise":"WB","Sampawati Enterprise":"UA","Samrat Store":"MA","Saradamoni":"TR","Sayanshi Marketing":"GHY","Sheetal Enterprise":"UA","Shivnarayan SushilKumar":"UA","Shree Balaji Agencies":"MA","Shree Hanuman Bhandar":"NB","Shree Khatu Shyam Enterprises":"NB","Shree Shankar Stores":"UA","Shreedhar Agency":"WB","Shri Krishna Store":"GR","Shubham Enterprise":"ML","Siang Traders":"AP","Siddhi Vinayak Marketing":"UA","Sinha Enterprise":"WB","Snigdha Varities":"TR","Sree Maa Store":"NB","Sri B.R. Agencies":"GHY","Sri P.R. Trading Company":"WB","Subarna Variety":"WB","Subhash Das & Brothers":"GR","Surabhi Store":"LA","Swastik Trade & Agencies":"UA","TALUKDAR ENTERPRISE":"GHY","TGT Enterprise":"WB","TMY Enterprises":"AP","Tapati Traders":"TR","Tara Commercial":"NB","Tele Point":"NB","Tirupati Enterprise":"WB","Tullah Enterprise":"UA","VISHNU TRADERS":"WB","Vishwanath Prasad Gupta":"LA","WAN ENTERPRISE":"NL","Xpress Trading":"GHY","Zainab Enterprise":"BV"},"manpower":[{"n":"Binod Kumar Raut","d":"CSO","u":"NER","z":"UA","pl":"Dibrugarh","dv":"Snacks","rt":"Lakhi Borah","st":"Active","dr":[],"as":[],"cdb":[],"mo":{}},{"n":"Jiban Phukan","d":"CSO","u":"NER","z":"LA","pl":"Barpeta","dv":"Snacks","rt":"Milan Sarma","st":"Active","dr":[],"as":[],"cdb":[],"mo":{}},{"n":"Lakhi Borah","d":"ASE","u":"NER","z":"UA","pl":"Dibrugarh","dv":"Snacks","rt":"Raju Verma","st":"Active","dr":["Binod Kumar Raut","Sachin Choudhary","Timm Dey","Sanjay Kumar Rajak","Bittu Seal"],"as":["Binod Kumar Raut","Sachin Choudhary","Timm Dey","Sanjay Kumar Rajak","Bittu Seal"],"cdb":[],"mo":{"Feb-26":{"t":0.0,"a":4.15},"Mar-26":{"t":4.62,"a":10.55}}},{"n":"Md.Salahuddin Ahmed","d":"Sr.CSO","u":"NER","z":"UA","pl":"Sibsagar","dv":"Snacks","rt":"Raju Verma","st":"Active","dr":["Touhid Ahmed"],"as":["Touhid Ahmed"],"cdb":[],"mo":{}},{"n":"Milan Sarma","d":"Sr.CSO","u":"NER","z":"LA","pl":"Bongaigaon","dv":"Snacks","rt":"Raju Verma","st":"Active","dr":["Jiban Phukan","Samarjit Kalita","Subhadip Brahmachari","Shyam Sundar Das"],"as":["Jiban Phukan","Samarjit Kalita","Subhadip Brahmachari","Shyam Sundar Das"],"cdb":[],"mo":{"Feb-26":{"t":5.84,"a":7.03},"Mar-26":{"t":5.85,"a":6.44}}},{"n":"Nantu Bikash Chakraborty","d":"ASE","u":"WB","z":"WB","pl":"Coochbihar","dv":"Snacks","rt":"Soumitra Saha","st":"Active","dr":[],"as":[],"cdb":[],"mo":{}},{"n":"Raju Verma","d":"Sr.ASM","u":"NER","z":"HO","pl":"Guwahati","dv":"Water","rt":"CEO","st":"Active","dr":["Lakhi Borah","Md.Salahuddin Ahmed","Milan Sarma","Uttam Roy","Thangjam Akash Singh","Sanjay Mahato","Jitendra Bhowmick","Bikky Kumar Singh"],"as":["Lakhi Borah","Md.Salahuddin Ahmed","Milan Sarma","Uttam Roy","Thangjam Akash Singh","Sanjay Mahato","Jitendra Bhowmick","Bikky Kumar Singh","Binod Kumar Raut","Sachin Choudhary","Timm Dey","Sanjay Kumar Rajak","Bittu Seal","Touhid Ahmed","Jiban Phukan","Samarjit Kalita","Subhadip Brahmachari","Shyam Sundar Das","Vishal Rana","Subra Das","Hritick Das","Subir Kumar Rai","Abhijeet Nath","Mintu Biswas","Tanmay Mitra","Arjun Debnath"],"cdb":[],"mo":{"Feb-26":{"t":12.4,"a":17.43},"Mar-26":{"t":15.9,"a":22.43},"Jan-26":{"t":8.5,"a":8.82}}},{"n":"Uttam Roy","d":"Sr.CSO","u":"NER","z":"ML","pl":"Shillong","dv":"Snacks","rt":"Raju Verma","st":"Active","dr":["Vishal Rana","Subra Das"],"as":["Vishal Rana","Subra Das"],"cdb":[],"mo":{"Jan-26":{"t":8.5,"a":8.82},"Feb-26":{"t":6.56,"a":6.25},"Mar-26":{"t":5.43,"a":5.44}}},{"n":"Vishal Rana","d":"CSO","u":"NER","z":"ML","pl":"Shillong","dv":"Snacks","rt":"Uttam Roy","st":"Active","dr":[],"as":[],"cdb":["AADHYA ENTERPRISE","Aara Trade Associates"],"mo":{"Jan-26":{"t":8.5,"a":8.82},"Feb-26":{"t":6.56,"a":6.25},"Mar-26":{"t":5.43,"a":5.44}}},{"n":"Sankar Dey","d":"ASE","u":"NER","z":"GHY","pl":"Guwahati","dv":"Snacks","rt":"Sankar Dey","st":"Active","dr":["Sankar Dey","Pinku Biswas","Arvind Kumar Sah","Abhijit Dhar","Madhab Das","Dipjyoti Barman","Arush Bhowmick"],"as":["Sankar Dey","Pinku Biswas","Arvind Kumar Sah","Abhijit Dhar","Madhab Das","Dipjyoti Barman","Arush Bhowmick"],"cdb":[],"mo":{"Jan-26":{"t":0.0,"a":2.5},"Feb-26":{"t":0.0,"a":4.35},"Mar-26":{"t":9.23,"a":9.22}}},{"n":"Mithun Sahaji","d":"Sr.CSO","u":"NER","z":"TR","pl":"Tripura","dv":"Snacks","rt":"Alok Bhattacharjee","st":"Active","dr":["Subhrajit Dey","Sourav Deb"],"as":["Subhrajit Dey","Sourav Deb"],"cdb":[],"mo":{}},{"n":"Samarjit Kalita","d":"CSO","u":"NER","z":"LA","pl":"Nalbari","dv":"Snacks","rt":"Milan Sarma","st":"Active","dr":[],"as":[],"cdb":["ABA Commerce Inspirations","Akriti Enterprise","Anil Saha & Sons"],"mo":{"Feb-26":{"t":5.84,"a":7.03},"Mar-26":{"t":5.85,"a":6.44}}},{"n":"Thangjam Akash Singh","d":"Sr.CSO","u":"NER","z":"MN","pl":"Imphal","dv":"Snacks","rt":"Raju Verma","st":"Active","dr":[],"as":[],"cdb":[],"mo":{}},{"n":"Hritick Das","d":"CSO","u":"NER","z":"NB","pl":"Tangla","dv":"Snacks","rt":"Sanjay Mahato","st":"Active","dr":[],"as":[],"cdb":[],"mo":{}},{"n":"Pinku Biswas","d":"CSO","u":"NER","z":"MA","pl":"Hojai","dv":"Snacks","rt":"Sankar Dey","st":"Active","dr":[],"as":[],"cdb":[],"mo":{}},{"n":"Sanjay Mahato","d":"ASE","u":"NER","z":"NB","pl":"Tezpur","dv":"Snacks","rt":"Raju Verma","st":"Active","dr":["Hritick Das","Subir Kumar Rai","Abhijeet Nath","Mintu Biswas","Tanmay Mitra"],"as":["Hritick Das","Subir Kumar Rai","Abhijeet Nath","Mintu Biswas","Tanmay Mitra"],"cdb":[],"mo":{}},{"n":"Arvind Kumar Sah","d":"CSO","u":"NER","z":"MA","pl":"Nagaon","dv":"Snacks","rt":"Sankar Dey","st":"Active","dr":[],"as":[],"cdb":["Balaji Store","Balaji Trading"],"mo":{"Jan-26":{"t":0.0,"a":2.5},"Feb-26":{"t":0.0,"a":4.35},"Mar-26":{"t":9.23,"a":9.22}}},{"n":"Ranjan Chakraborty","d":"ASM","u":"WB","z":"WB","pl":"Howrah","dv":"Snacks","rt":"Soumitra Saha","st":"Active","dr":["Partha Pratim Ghosh","Ayan Das","Mrinal Kanti Dutta","Sujay Thandar"],"as":["Partha Pratim Ghosh","Ayan Das","Mrinal Kanti Dutta","Sujay Thandar"],"cdb":[],"mo":{}},{"n":"Chiranjib Chatterjee","d":"ASM","u":"WB","z":"WB","pl":"Kolkata","dv":"Snacks","rt":"Soumitra Saha","st":"Active","dr":["Durjoy Chatterjee","Amit Singha Roy","Manoj Bhowmick","Rakesh Prasad","Supriya Bose","Nitesh Roy","Gourab Das"],"as":["Durjoy Chatterjee","Amit Singha Roy","Manoj Bhowmick","Rakesh Prasad","Supriya Bose","Nitesh Roy","Gourab Das"],"cdb":[],"mo":{"Jan-26":{"t":3.05,"a":3.06},"Feb-26":{"t":4.43,"a":2.95},"Mar-26":{"t":3.21,"a":0.0}}},{"n":"Kalyan Majumder","d":"ASE","u":"WB","z":"WB","pl":"Siliguri","dv":"Snacks","rt":"Sanjay Das","st":"Active","dr":[],"as":[],"cdb":[],"mo":{}},{"n":"Sachin Choudhary","d":"CSO","u":"NER","z":"UA","pl":"Jorhat","dv":"Snacks","rt":"Lakhi Borah","st":"Active","dr":[],"as":[],"cdb":["Choudhary Marketing Agency"],"mo":{"Feb-26":{"t":0.0,"a":4.15},"Mar-26":{"t":4.62,"a":10.55}}},{"n":"Touhid Ahmed","d":"CSO","u":"NER","z":"UA","pl":"Sivasagar","dv":"Snacks","rt":"Md.Salahuddin Ahmed","st":"Active","dr":[],"as":[],"cdb":[],"mo":{}},{"n":"Uday Balmiki","d":"CSO","u":"WB","z":"WB","pl":"Coochbehar","dv":"Snacks","rt":"Nantu Chakraborty","st":"Inactive","dr":[],"as":[],"cdb":[],"mo":{}},{"n":"Akash Mallik","d":"CSO","u":"NER","z":"MZ","pl":"Aizawl","dv":"Snacks","rt":"Liton Ghosh","st":"Active","dr":[],"as":[],"cdb":[],"mo":{}},{"n":"Durjoy Chatterjee","d":"Sr.CSO","u":"WB","z":"WB","pl":"Krishnagar","dv":"Snacks","rt":"Chiranjib Chatterjee","st":"Active","dr":[],"as":[],"cdb":[],"mo":{}},{"n":"Partha Pratim Ghosh","d":"Sr.CSO","u":"WB","z":"WB","pl":"Bishnupur","dv":"Snacks","rt":"Ranjan Chakraborty","st":"Active","dr":[],"as":[],"cdb":[],"mo":{}},{"n":"Amit Singha Roy","d":"Sr.CSO","u":"WB","z":"WB","pl":"Burdwan","dv":"Snacks","rt":"Chiranjib Chatterjee","st":"Active","dr":[],"as":[],"cdb":[],"mo":{}},{"n":"Subra Das","d":"CSO","u":"NER","z":"ML","pl":"Shillong","dv":"Snacks","rt":"Uttam Roy","st":"Active","dr":[],"as":[],"cdb":[],"mo":{}},{"n":"Sanjay Das","d":"ASM","u":"WB","z":"WB","pl":"Malda","dv":"Snacks","rt":"Soumitra Saha","st":"Active","dr":["Kalyan Majumder","Rajiv Das","Manash Saha","Ranjan Majumdar"],"as":["Kalyan Majumder","Rajiv Das","Manash Saha","Ranjan Majumdar"],"cdb":[],"mo":{"Jan-26":{"t":2.89,"a":2.9}}},{"n":"Abhijit Dhar","d":"CSO","u":"NER","z":"GHY","pl":"Guwahati","dv":"Snacks","rt":"Sankar Dey","st":"Active","dr":[],"as":[],"cdb":[],"mo":{}},{"n":"Rajiv Das","d":"CSO","u":"WB","z":"WB","pl":"Siliguri","dv":"Snacks","rt":"Sanjay Das","st":"Active","dr":[],"as":[],"cdb":["Ankit Trading Company"],"mo":{"Jan-26":{"t":2.89,"a":2.9}}},{"n":"Subhrajit Dey","d":"CSO","u":"NER","z":"TR","pl":"Agartala","dv":"Snacks","rt":"Mithun Sahaji","st":"Active","dr":[],"as":[],"cdb":[],"mo":{}},{"n":"Ayan Das","d":"CSO","u":"WB","z":"WB","pl":"Egra","dv":"Snacks","rt":"Ranjan Chakraborty","st":"Active","dr":[],"as":[],"cdb":[],"mo":{}},{"n":"Madhab Das","d":"CSO","u":"NER","z":"MA","pl":"Bokulia","dv":"Snacks","rt":"Sankar Dey","st":"Active","dr":[],"as":[],"cdb":[],"mo":{}},{"n":"Lalit Verma","d":"Business Head","u":"NER","z":"GHY","pl":"Guwahati","dv":"Snacks","rt":"CEO","st":"Active","dr":["Sumnath Kuri","Bishwajit Kalita"],"as":["Sumnath Kuri","Bishwajit Kalita"],"cdb":[],"mo":{}},{"n":"Mrinal Kanti Dutta","d":"ASE","u":"WB","z":"WB","pl":"Kolkata","dv":"Snacks","rt":"Ranjan Chakraborty","st":"Active","dr":[],"as":[],"cdb":[],"mo":{}},{"n":"Subir Kumar Rai","d":"CSO","u":"NER","z":"NB","pl":"Tezpur","dv":"Snacks","rt":"Sanjay Mahato","st":"Active","dr":[],"as":[],"cdb":[],"mo":{}},{"n":"Jitendra Bhowmick","d":"ASE","u":"NER","z":"GHY","pl":"Guwahati","dv":"Water","rt":"Raju Verma","st":"Active","dr":["Arjun Debnath"],"as":["Arjun Debnath"],"cdb":[],"mo":{}},{"n":"Manoj Bhowmick","d":"Sr.CSO","u":"WB","z":"WB","pl":"Murshidabad","dv":"Foods","rt":"Chiranjib Chatterjee","st":"Active","dr":[],"as":[],"cdb":[],"mo":{}},{"n":"Rakesh Prasad","d":"Sr.CSO","u":"WB","z":"WB","pl":"Asansol","dv":"Foods","rt":"Chiranjib Chatterjee","st":"Active","dr":[],"as":[],"cdb":[],"mo":{}},{"n":"Supriya Bose","d":"CSO","u":"WB","z":"WB","pl":"Ashokenagar","dv":"Snacks","rt":"Chiranjib Chatterjee","st":"Active","dr":[],"as":[],"cdb":["Aditya Agency","Aishani Enterprise"],"mo":{"Jan-26":{"t":3.05,"a":3.06},"Feb-26":{"t":4.43,"a":2.95},"Mar-26":{"t":3.21,"a":0.0}}},{"n":"Abhijeet Nath","d":"CSO","u":"NER","z":"NB","pl":"Silapathar","dv":"Snacks","rt":"Sanjay Mahato","st":"Active","dr":[],"as":[],"cdb":[],"mo":{}},{"n":"Dipjyoti Barman","d":"CSO","u":"NER","z":"GHY","pl":"Narengi","dv":"Snacks","rt":"Sankar Dey","st":"Active","dr":[],"as":[],"cdb":[],"mo":{}},{"n":"Timm Dey","d":"CSO","u":"NER","z":"UA","pl":"Moran","dv":"Snacks","rt":"Lakhi Borah","st":"Active","dr":[],"as":[],"cdb":[],"mo":{}},{"n":"Amit Karmakar","d":"CSO","u":"WB","z":"WB","pl":"Alipurduar","dv":"Snacks","rt":"Nantu Chakraborty","st":"Active","dr":[],"as":[],"cdb":[],"mo":{}},{"n":"Pritam Mitra","d":"Sr.CSO","u":"WB","z":"WB","pl":"South 24 Parganas","dv":"Water","rt":"Raktim Basu","st":"Active","dr":[],"as":[],"cdb":[],"mo":{}},{"n":"Subhadip Brahmachari","d":"CSO","u":"NER","z":"LA","pl":"Dhubri","dv":"Snacks","rt":"Milan Sarma","st":"Active","dr":[],"as":[],"cdb":[],"mo":{}},{"n":"Nitesh Roy","d":"CSO","u":"WB","z":"WB","pl":"Chinsurah","dv":"Foods","rt":"Chiranjib Chatterjee","st":"Active","dr":[],"as":[],"cdb":[],"mo":{}},{"n":"Arjun Debnath","d":"CSO","u":"NER","z":"Ghy","pl":"Guwahati","dv":"Water","rt":"Jitendra Bhowmick","st":"Active","dr":[],"as":[],"cdb":[],"mo":{}},{"n":"Sanjay Kumar Rajak","d":"CSO","u":"NER","z":"UA","pl":"Tinsukia","dv":"Snacks","rt":"Lakhi Borah","st":"Active","dr":[],"as":[],"cdb":[],"mo":{}},{"n":"Sumnath Kuri","d":"Sr.CSO","u":"NER","z":"BV","pl":"Karimganj","dv":"Foods","rt":"Lalit Verma","st":"Active","dr":[],"as":[],"cdb":[],"mo":{}},{"n":"Bittu Seal","d":"CSO","u":"NER","z":"UA","pl":"Margherita","dv":"Snacks","rt":"Lakhi Borah","st":"Active","dr":[],"as":[],"cdb":[],"mo":{}},{"n":"Raktim Basu","d":"ASM","u":"WB","z":"WB","pl":"Kolkata","dv":"Water","rt":"Soumitra Saha","st":"Active","dr":["Pritam Mitra"],"as":["Pritam Mitra"],"cdb":[],"mo":{}},{"n":"Gourab Das","d":"Sr.CSO","u":"WB","z":"WB","pl":"North 24 Parganas","dv":"Snacks","rt":"Chiranjib Chatterjee","st":"Active","dr":[],"as":[],"cdb":[],"mo":{}},{"n":"Bhola Nath Marik","d":"Sr.CSO","u":"WB","z":"WB","pl":"North Kolkata","dv":"Foods","rt":"Soumitra Saha","st":"Active","dr":[],"as":[],"cdb":[],"mo":{}},{"n":"Sujay Thandar","d":"Sr.CSO","u":"WB","z":"WB","pl":"Howrah","dv":"Snacks","rt":"Ranjan Chakraborty","st":"Active","dr":[],"as":[],"cdb":[],"mo":{}},{"n":"Dipu Biswas","d":"Sr.CSO","u":"WB","z":"WB","pl":"North 24 Parganas","dv":"Foods","rt":"Soumitra Saha","st":"Active","dr":[],"as":[],"cdb":[],"mo":{}},{"n":"Manash Saha","d":"Sr.CSO","u":"WB","z":"WB","pl":"Raiganj","dv":"Snacks","rt":"Sanjay Das","st":"Active","dr":[],"as":[],"cdb":[],"mo":{}},{"n":"Mintu Biswas","d":"CSO","u":"NER","z":"AP","pl":"Itanagar","dv":"Water","rt":"Sanjay Mahato","st":"Active","dr":[],"as":[],"cdb":[],"mo":{}},{"n":"Sourav Deb","d":"CSO","u":"NER","z":"TR","pl":"Agartala","dv":"Snacks","rt":"Mithun Sahaji","st":"Active","dr":[],"as":[],"cdb":[],"mo":{}},{"n":"Bikky Kumar Singh","d":"CSO","u":"NER","z":"NB","pl":"Baihata","dv":"Water","rt":"Raju Verma","st":"Active","dr":[],"as":[],"cdb":[],"mo":{}},{"n":"Shyam Sundar Das","d":"CSO","u":"NER","z":"LA","pl":"Bongaigaon","dv":"Snacks","rt":"Milan Sarma","st":"Active","dr":[],"as":[],"cdb":[],"mo":{}},{"n":"Arush Bhowmick","d":"CSO","u":"NER","z":"GHY","pl":"Guwahati","dv":"Snacks","rt":"Sankar Dey","st":"Active","dr":[],"as":[],"cdb":[],"mo":{}},{"n":"Litan Debnath","d":"ASE","u":"NER","z":"TR","pl":"Agartala","dv":"Water","rt":"Alok Bhattacharjee","st":"Active","dr":[],"as":[],"cdb":[],"mo":{}},{"n":"Tanmay Mitra","d":"CSO","u":"NER","z":"NB","pl":"Gohpur","dv":"Snacks","rt":"Sanjay Mahato","st":"Active","dr":[],"as":[],"cdb":[],"mo":{}},{"n":"Subhankar Das","d":"Sr.CSO","u":"WB","z":"WB","pl":"South Kolkata","dv":"Snacks","rt":"Joydeep Pal","st":"Active","dr":[],"as":[],"cdb":[],"mo":{}},{"n":"Raja Palit","d":"CSO","u":"WB","z":"WB","pl":"North Kolkata","dv":"Snacks","rt":"Joydeep Pal","st":"Active","dr":[],"as":[],"cdb":["Aditya Enterprise"],"mo":{"Jan-26":{"t":3.25,"a":3.28},"Mar-26":{"t":2.48,"a":2.47}}},{"n":"Gopinath Patlack","d":"Sr.CSO","u":"WB","z":"WB","pl":"Kolkata","dv":"Snacks","rt":"Joydeep Pal","st":"Inactive","dr":[],"as":[],"cdb":[],"mo":{}},{"n":"Ranjan Majumdar","d":"Sr.CSO","u":"WB","z":"WB","pl":"Islampur","dv":"Snacks","rt":"Sanjay Das","st":"Inactive","dr":[],"as":[],"cdb":[],"mo":{}},{"n":"Goutam Malakar","d":"CSO","u":"NER","z":"TR","pl":"Dharmanagar","dv":"Snacks","rt":"Alok Bhattacharjee","st":"Inactive","dr":[],"as":[],"cdb":[],"mo":{}},{"n":"Indrajeet Baruah","d":"CSO","u":"NER","z":"MN","pl":"Imphal","dv":"Snacks","rt":"Alok Bhattacharjee","st":"Inactive","dr":[],"as":[],"cdb":[],"mo":{}}],"mpMonths":["Jan-26","Feb-26","Mar-26"],"distTargets":{"AADHYA ENTERPRISE":{"Water":{"Feb-26":{"t":0.59,"a":0.59,"sk":{"SUREWATER BY INDEPENDENCE 500ML (494759378)":{"t":0.59,"a":0.59}}}},"Snacks":{"Feb-26":{"t":0.31,"a":0.0,"sk":{"ALANS RC PC CO RS5":{"t":0.31,"a":0.0}}}}},"Aara Trade Associates":{"Snacks":{"Jan-26":{"t":8.5,"a":8.82,"sk":{"ALANS RC PC TMT RS5":{"t":1.19,"a":1.19},"ALANS CHTKL MSL RS5":{"t":0.38,"a":0.38},"ALANS PIPES SLT RS5":{"t":1.62,"a":1.61},"ALANS NOODLES RS5":{"t":0.38,"a":0.38},"ALANS FC PC CLSSLT RS5":{"t":2.1,"a":2.1},"ALANS RC PC CO RS5":{"t":2.16,"a":2.48},"MASTI OYE NMKN KHTA METHA RS5":{"t":0.27,"a":0.27},"MASTI OYE NMKN PNJBI TDKA RS5":{"t":0.4,"a":0.4}}},"Feb-26":{"t":5.66,"a":5.66,"sk":{"ALANS FC PC CLSSLT RS5":{"t":0.63,"a":0.63},"ALANS RC PC CO RS5":{"t":1.13,"a":1.13},"ALANS RC PC TMT RS5":{"t":1.13,"a":1.13},"ALANS PIPES SLT RS5":{"t":1.84,"a":1.83},"MASTI OYE NMKN KHTA METHA RS5":{"t":0.13,"a":0.13},"MASTI OYE NMKN NVRTN MIX RS5":{"t":0.13,"a":0.13},"MASTI OYE NMKN TSTY PENTS RS5":{"t":0.13,"a":0.13},"MASTI OYE NMKN PNJBI TDKA RS5":{"t":0.54,"a":0.54}}},"Mar-26":{"t":5.43,"a":5.44,"sk":{"ALANS FC PC CLSSLT RS5":{"t":0.58,"a":0.58},"ALANS RC PC CO RS5":{"t":1.16,"a":1.16},"ALANS RC PC MSL RS5":{"t":0.41,"a":0.41},"ALANS RC PC TMT RS5":{"t":1.16,"a":1.16},"ALANS PIPES SLT RS5":{"t":1.25,"a":1.25},"MASTI OYE NMKN SV BHJIA RS5":{"t":0.37,"a":0.37},"MASTI OYE NMKN PNJBI TDKA RS5":{"t":0.5,"a":0.5}}}}},"ABA Commerce Inspirations":{"Snacks":{"Feb-26":{"t":3.13,"a":3.14,"sk":{"ALANS FC PC CLSSLT RS5":{"t":0.31,"a":0.31},"ALANS RC PC CO RS5":{"t":0.31,"a":0.31},"ALANS RC PC MSL RS5":{"t":0.31,"a":0.31},"ALANS CHTKL MSL RS5":{"t":0.25,"a":0.25},"ALANS PIPES SLT RS5":{"t":0.27,"a":0.27},"ALANS NOODLES RS5":{"t":0.38,"a":0.38},"ALANS FC PC CLSSLT RS10":{"t":0.19,"a":0.19},"ALANS RC PC CO RS10":{"t":0.19,"a":0.19},"ALANS RC PC MSL RS10":{"t":0.19,"a":0.19},"MASTI OYE NMKN TSTY PENTS RS5":{"t":0.73,"a":0.73}}}}},"Akriti Enterprise":{"Water":{"Mar-26":{"t":1.18,"a":1.78,"sk":{"SUREWATER BY INDEPENDENCE 500ML (494759378)":{"t":0.59,"a":1.19},"SUREWATER BY INDEPENDENCE 1LTR (494759379)":{"t":0.59,"a":0.0},"SUREWATER BY CAMPA 500ML (494590017)":{"t":0.0,"a":0.59}}}}},"Anil Saha & Sons":{"Foods":{"Feb-26":{"t":2.12,"a":2.12,"sk":{"SNCTC MINI CHKN NDLS 25G":{"t":0.6,"a":0.6},"SIL CHOW CHOW NOODLES CHKN 50G":{"t":1.22,"a":1.22},"SIL CHOW CHOW NOODLES VEG 50G":{"t":0.3,"a":0.3}}}},"Snacks":{"Mar-26":{"t":4.08,"a":4.07,"sk":{"ALANS FC PC CLSSLT RS5":{"t":0.41,"a":0.41},"ALANS RC PC CO RS5":{"t":0.55,"a":0.55},"ALANS RC PC MSL RS5":{"t":0.41,"a":0.41},"ALANS RC PC TMT RS5":{"t":0.41,"a":0.41},"ALANS CHTKL MSL RS5":{"t":0.43,"a":0.42},"ALANS PIPES SLT RS5":{"t":0.67,"a":0.67},"ALANS FC PC CLSSLT RS10":{"t":0.09,"a":0.09},"ALANS RC PC CO RS10":{"t":0.09,"a":0.09},"ALANS RC PC TMT RS10":{"t":0.09,"a":0.09},"ALANS RC PC MSL RS10":{"t":0.09,"a":0.09},"MASTI OYE NMKN SV BHJIA RS5":{"t":0.15,"a":0.15},"MASTI OYE NMKN KHTA METHA RS5":{"t":0.15,"a":0.15},"MASTI OYE NMKN NVRTN MIX RS5":{"t":0.14,"a":0.14},"MASTI OYE NMKN PNJBI TDKA RS5":{"t":0.15,"a":0.15},"MASTI OYE NMKN TSTY PENTS RS5":{"t":0.15,"a":0.15},"ALANS NOODLES RS5":{"t":0.1,"a":0.1}}}},"Water":{"Feb-26":{"t":0.59,"a":1.78,"sk":{"SUREWATER BY INDEPENDENCE 500ML (494759378)":{"t":0.59,"a":1.78}}},"Mar-26":{"t":0.59,"a":0.59,"sk":{"SUREWATER BY INDEPENDENCE 1LTR (494759379)":{"t":0.59,"a":0.0},"SUREWATER BY CAMPA 500ML (494590017)":{"t":0.0,"a":0.59}}}}},"Balaji Store":{"Bev":{"Mar-26":{"t":4.61,"a":4.6,"sk":{"CAMPA ENERGY ORANGE BOOST 150ML PET (494606998)":{"t":0.43,"a":0.43},"CAMPA ENERGY PURPLE BOOST 150ML PET (494606964)":{"t":0.39,"a":0.39},"CAMPA ENERGY NEON BOOST 150ML PET (494607000)":{"t":0.96,"a":0.96},"CAMPA ENERGY LEMON BOOST 150ML PET (494606994)":{"t":0.35,"a":0.35},"CAMPA POWER UP ENERGY 150ML PET (494607001)":{"t":0.39,"a":0.39},"RASKIK MANGO CAN 185ML (494606982)":{"t":0.5,"a":0.5},"RASKIK ORANGE CAN 185ML (494606983)":{"t":0.5,"a":0.5},"ARMOUR ENERGY 185ML CAN (494590228)":{"t":1.09,"a":1.09}}}}},"Balaji Trading":{"Bev":{"Mar-26":{"t":4.62,"a":4.61,"sk":{"CAMPA ENERGY ORANGE BOOST 150ML PET (494606998)":{"t":0.44,"a":0.44},"CAMPA ENERGY PURPLE BOOST 150ML PET (494606964)":{"t":0.39,"a":0.39},"CAMPA ENERGY NEON BOOST 150ML PET (494607000)":{"t":0.96,"a":0.96},"CAMPA ENERGY LEMON BOOST 150ML PET (494606994)":{"t":0.35,"a":0.35},"CAMPA POWER UP ENERGY 150ML PET (494607001)":{"t":0.39,"a":0.39},"RASKIK MANGO CAN 185ML (494606982)":{"t":0.5,"a":0.5},"RASKIK ORANGE CAN 185ML (494606983)":{"t":0.5,"a":0.5},"ARMOUR ENERGY 185ML CAN (494590228)":{"t":1.09,"a":1.09}}}}},"Choudhary Marketing Agency":{"Bev":{"Mar-26":{"t":4.62,"a":4.61,"sk":{"CAMPA ENERGY ORANGE BOOST 150ML PET (494606998)":{"t":0.44,"a":0.44},"CAMPA ENERGY PURPLE BOOST 150ML PET (494606964)":{"t":0.39,"a":0.39},"CAMPA ENERGY NEON BOOST 150ML PET (494607000)":{"t":0.96,"a":0.96},"CAMPA ENERGY LEMON BOOST 150ML PET (494606994)":{"t":0.35,"a":0.35},"CAMPA POWER UP ENERGY 150ML PET (494607001)":{"t":0.39,"a":0.39},"RASKIK MANGO CAN 185ML (494606982)":{"t":0.5,"a":0.5},"RASKIK ORANGE CAN 185ML (494606983)":{"t":0.5,"a":0.5},"ARMOUR ENERGY 185ML CAN (494590228)":{"t":1.09,"a":1.09}}}}},"Aditya Agency":{"Bev":{"Feb-26":{"t":1.94,"a":0.0,"sk":{"CAMPA ENERGY ORANGE BOOST 150ML PET (494606998)":{"t":0.88,"a":0.0},"CAMPA ENERGY NEON BOOST 150ML PET (494607000)":{"t":0.78,"a":0.0},"ARMOUR ENERGY 185ML CAN (494590228)":{"t":0.24,"a":0.0},"CAMPA POWER UP ENERGY 150ML PET (494607001)":{"t":0.04,"a":0.0}}}},"Foods":{"Feb-26":{"t":1.94,"a":2.95,"sk":{"SIL INSTANT NOODLES MASALA 25G":{"t":1.66,"a":1.66},"SIL INSTANT NOODLES MASALA 55G":{"t":0.24,"a":0.24},"SIL TOMATO KETCHUP 8G SACHET":{"t":0.04,"a":0.04},"SIL MIXED FRUIT JAM 100G TUB":{"t":0.0,"a":0.15},"SIL TOMATO KETCHUP 425G PCH":{"t":0.0,"a":0.42},"SIL TOMATO KETCHUP 850G PCH":{"t":0.0,"a":0.31},"SIL TOMATO KETCHUP 90G PCH":{"t":0.0,"a":0.13}}}},"Water":{"Feb-26":{"t":0.55,"a":0.0,"sk":{"SUREWATER BY INDEPENDENCE 500ML (494759378)":{"t":0.13,"a":0.0},"SUREWATER BY INDEPENDENCE 1LTR (494759379)":{"t":0.42,"a":0.0}}}}},"Aditya Enterprise":{"Snacks":{"Jan-26":{"t":3.25,"a":3.28,"sk":{"ALANS FC PC CLSSLT RS5":{"t":0.4,"a":0.4},"ALANS RC PC MSL RS5":{"t":0.31,"a":0.31},"ALANS RC PC TMT RS5":{"t":0.34,"a":0.34},"ALANS CHTKL MSL RS5":{"t":0.37,"a":0.37},"ALANS PIPES SLT RS5":{"t":0.59,"a":0.59},"ALANS FC PC CLSSLT RS10":{"t":0.11,"a":0.11},"ALANS RC PC CO RS10":{"t":0.14,"a":0.14},"ALANS RC PC TMT RS10":{"t":0.09,"a":0.09},"ALANS RC PC MSL RS10":{"t":0.09,"a":0.09},"MASTI OYE NMKN SV BHJIA RS5":{"t":0.09,"a":0.09},"MASTI OYE NMKN KHTA METHA RS5":{"t":0.07,"a":0.07},"MASTI OYE NMKN NVRTN MIX RS5":{"t":0.07,"a":0.07},"MASTI OYE NMKN PNJBI TDKA RS5":{"t":0.33,"a":0.33},"MASTI OYE NMKN ALO BHJIA RS5":{"t":0.08,"a":0.08},"MASTI OYE NMKN TSTY PENTS RS5":{"t":0.17,"a":0.17}}},"Mar-26":{"t":2.48,"a":2.47,"sk":{"ALANS FC PC CLSSLT RS5":{"t":0.12,"a":0.12},"ALANS RC PC CO RS5":{"t":0.69,"a":0.69},"ALANS RC PC MSL RS5":{"t":0.23,"a":0.23},"ALANS RC PC TMT RS5":{"t":0.35,"a":0.35},"ALANS CHTKL MSL RS5":{"t":0.23,"a":0.23},"ALANS PIPES SLT RS5":{"t":0.35,"a":0.35},"ALANS NOODLES RS5":{"t":0.35,"a":0.35},"MASTI OYE NMKN SV BHJIA RS5":{"t":0.09,"a":0.09},"MASTI OYE NMKN ALO BHJIA RS5":{"t":0.07,"a":0.07}}}}},"Aishani Enterprise":{"Snacks":{"Jan-26":{"t":3.05,"a":3.06,"sk":{"ALANS FC PC CLSSLT RS5":{"t":0.34,"a":0.34},"ALANS RC PC CO RS5":{"t":0.34,"a":0.34},"ALANS RC PC MSL RS5":{"t":0.37,"a":0.37},"ALANS RC PC TMT RS5":{"t":0.31,"a":0.31},"ALANS CHTKL MSL RS5":{"t":0.31,"a":0.31},"ALANS PIPES SLT RS5":{"t":0.32,"a":0.32},"ALANS NOODLES RS5":{"t":0.27,"a":0.27},"ALANS FC PC CLSSLT RS10":{"t":0.05,"a":0.05},"ALANS RC PC CO RS10":{"t":0.05,"a":0.05},"ALANS RC PC MSL RS10":{"t":0.05,"a":0.05},"MASTI OYE NMKN SV BHJIA RS5":{"t":0.13,"a":0.13},"MASTI OYE NMKN KHTA METHA RS5":{"t":0.07,"a":0.07},"MASTI OYE NMKN NVRTN MIX RS5":{"t":0.09,"a":0.09},"MASTI OYE NMKN PNJBI TDKA RS5":{"t":0.13,"a":0.13},"MASTI OYE NMKN ALO BHJIA RS5":{"t":0.13,"a":0.13},"MASTI OYE NMKN TSTY PENTS RS5":{"t":0.09,"a":0.09}}},"Mar-26":{"t":3.21,"a":0.0,"sk":{"ALANS FC PC CLSSLT RS5":{"t":0.12,"a":0.0},"ALANS RC PC CO RS5":{"t":0.87,"a":0.0},"ALANS RC PC MSL RS5":{"t":0.12,"a":0.0},"ALANS RC PC TMT RS5":{"t":0.12,"a":0.0},"ALANS CHTKL MSL RS5":{"t":0.35,"a":0.0},"ALANS RC PC CO RS10":{"t":0.08,"a":0.0},"ALANS RC PC MSL RS10":{"t":0.04,"a":0.0},"MASTI OYE NMKN SV BHJIA RS5":{"t":0.06,"a":0.0},"MASTI OYE NMKN PNJBI TDKA RS5":{"t":0.19,"a":0.0},"MASTI OYE NMKN ALO BHJIA RS5":{"t":0.12,"a":0.0},"MASTI OYE NMKN TSTY PENTS RS5":{"t":0.99,"a":0.0},"MASTI OYE NMKN MOONG DAL RS5":{"t":0.15,"a":0.0}}}}},"Ankit Trading Company":{"Snacks":{"Jan-26":{"t":2.89,"a":2.9,"sk":{"ALANS FC PC CLSSLT RS5":{"t":0.22,"a":0.22},"ALANS RC PC CO RS5":{"t":0.31,"a":0.31},"ALANS RC PC MSL RS5":{"t":0.25,"a":0.25},"ALANS RC PC TMT RS5":{"t":0.19,"a":0.19},"ALANS CHTKL MSL RS5":{"t":0.25,"a":0.25},"ALANS PIPES SLT RS5":{"t":0.54,"a":0.54},"ALANS NOODLES RS5":{"t":0.19,"a":0.19},"ALANS FC PC CLSSLT RS10":{"t":0.09,"a":0.09},"ALANS RC PC CO RS10":{"t":0.09,"a":0.09},"ALANS RC PC TMT RS10":{"t":0.09,"a":0.09},"ALANS RC PC MSL RS10":{"t":0.09,"a":0.09},"MASTI OYE NMKN SV BHJIA RS5":{"t":0.11,"a":0.11},"MASTI OYE NMKN KHTA METHA RS5":{"t":0.04,"a":0.04},"MASTI OYE NMKN ALO BHJIA RS5":{"t":0.11,"a":0.11},"MASTI OYE NMKN TSTY PENTS RS5":{"t":0.32,"a":0.32}}}}}},"csoMap":{"AADHYA ENTERPRISE":"Vishal Rana","Aara Trade Associates":"Vishal Rana","ABA Commerce Inspirations":"Samarjit Kalita","Akriti Enterprise":"Samarjit Kalita","Anil Saha & Sons":"Samarjit Kalita","Balaji Store":"Arvind Kumar Sah","Balaji Trading":"Arvind Kumar Sah","Choudhary Marketing Agency":"Sachin Choudhary","Aditya Agency":"Supriya Bose","Aditya Enterprise":"Raja Palit","Aishani Enterprise":"Supriya Bose","Ankit Trading Company":"Rajiv Das"},"multiDivDists":{"Anil Saha & Sons":["Foods","Snacks","Water"],"Ayush Trading":["Foods","Snacks"],"Balaji Store":["Bev","Foods","Snacks","Water"],"Balaji Trading":["Bev","Water"],"Bikauram Kamalapuri and Company":["Snacks","Water"],"Chatra Bandhu":["Foods","Snacks","Water"],"Choudhary Marketing Agency":["Bev","Water"],"DUTTA BHANDAR":["Snacks","Water"],"Ganesh Store":["Foods","Water"],"Geeta Marketing":["Snacks","Water"],"Ghosh Enterprise":["Foods","Snacks","Water"],"Hiyya Riya Store":["Foods","Snacks","Water"],"Kalita and Son Traders":["Bev","Water"],"Kamdhenu Traders":["Snacks","Water"],"Lakhdatar Enterprise":["Foods","Snacks","Water"],"M.J.M Store":["Snacks","Water"],"MEGHALAYA TRADING":["Foods","Water"],"Maa Bhagawati Enterprise":["Foods","Snacks"],"Maa Kali Enterprise":["Foods","Snacks"],"Maa Kali Store":["Snacks","Water"],"Mahadeb Bhander":["Bev","Foods","Snacks"],"Mahato Store":["Foods","Snacks","Water"],"Mayabini Enterprise":["Foods","Snacks","Water"],"N.C. Enterprise":["Foods","Snacks"],"NEHA TRADING":["Foods","Water"],"NV Distributor":["Foods","Snacks"],"RAMKUMAR CHANDRATAN":["Bev","Water"],"Rahul Prasad":["Foods","Snacks","Water"],"Rubi Enterprise":["Foods","Snacks"],"S S BROTHERS STORE":["Bev","Snacks","Water"],"S.T. Enterprise":["Foods","Snacks"],"STS Enterprises":["Foods","Snacks","Water"],"Saanvi Enterprise":["Foods","Snacks","Water"],"Saradamoni":["Foods","Snacks"],"Sheetal Enterprise":["Foods","Snacks","Water"],"Shree Shankar Stores":["Foods","Snacks"],"Shubham Enterprise":["Foods","Snacks"],"Siang Traders":["Foods","Snacks"],"Siddhi Vinayak Marketing":["Foods","Water"],"Sree Maa Store":["Foods","Snacks"],"Sri B.R. Agencies":["Foods","Snacks"],"Sri P.R. Trading Company":["Foods","Snacks","Water"],"Subhash Das & Brothers":["Snacks","Water"],"Swastik Trade & Agencies":["Foods","Snacks"],"TMY Enterprises":["Snacks","Water"],"Tapati Traders":["Foods","Snacks","Water"],"Tele Point":["Snacks","Water"],"Tullah Enterprise":["Foods","Snacks","Water"]}};
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CONSTANTS & HELPERS
+// ═══════════════════════════════════════════════════════════════════════════
+const PAL = ['#1a56db','#7e3af2','#0ea5e9','#059669','#d97706','#dc2626',
+             '#ec4899','#14b8a6','#f97316','#8b5cf6','#10b981','#6366f1',
+             '#f59e0b','#3b82f6','#ef4444','#84cc16'];
+const CAT_COLOR = {};
+D.categories.forEach((c,i) => CAT_COLOR[c] = PAL[i % PAL.length]);
+const MONTH_NUM = {Jan:1,Feb:2,Mar:3,Apr:4,May:5,Jun:6,
+                   Jul:7,Aug:8,Sep:9,Oct:10,Nov:11,Dec:12};
+
+const CH = {};
+Chart.defaults.font.family = "'Segoe UI',Arial,sans-serif";
+Chart.defaults.font.size   = 11;
+Chart.defaults.color       = '#6b7280';
+
+const fmt    = n => n == null ? '—' : (n >= 100 ? n.toFixed(1) : n.toFixed(2));
+const fmtQty = n => n >= 1e7 ? (n/1e7).toFixed(2)+' Cr' : n >= 1e5 ? (n/1e5).toFixed(1)+'L' : n.toLocaleString();
+const round  = n => Math.round(n * 100) / 100;
+const pct    = (v, tot) => tot > 0 ? ((v/tot)*100).toFixed(1)+'%' : '—';
+const destroy = id => { if(CH[id]){ CH[id].destroy(); delete CH[id]; } };
+const msk    = m => { try { const [a,b]=m.split('-'); return (2000+parseInt(b))*100+(MONTH_NUM[a]||0); } catch(e){return 0;} };
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FILTER STATE (multi-select arrays)
+// ═══════════════════════════════════════════════════════════════════════════
+let F = { regions:['All'], divisions:['All'], months:['All'] };
+let CHART_MODE   = 'monthly';   // 'monthly' | 'cumulative'
+let HEALTH_FILTER= 'all';       // 'all' | 'active' | 'inactive'
+let HEALTH_SORT  = { col: 'rev', dir: 'desc' };
+let ACTIVE_TAB   = 'overview';
+let MP_VIEW      = 'cards';     // 'cards' | 'table'
+let TGT_VIEW     = 'dist';      // 'dist' | 'person'
+let ZONE_DEEPDIVE= null;        // null | zone name string
+
+// ═══════════════════════════════════════════════════════════════════════════
+// BUILD FILTER BUTTONS
+// ═══════════════════════════════════════════════════════════════════════════
+function buildFilters() {
+  buildGroup('fg-region',   'regions',   D.regions);
+  buildGroup('fg-division', 'divisions', D.divisions);
+  buildGroup('fg-month',    'months',    D.months);
+}
+
+function buildGroup(containerId, fkey, values) {
+  const el = document.getElementById(containerId);
+  el.innerHTML = '';
+  ['All', ...values].forEach(v => {
+    const btn = document.createElement('button');
+    btn.className = 'fbtn' + (v === 'All' ? ' on' : '');
+    btn.dataset.fkey = fkey;
+    btn.dataset.val  = v;
+    btn.textContent  = v;
+    btn.addEventListener('click', () => toggleFilter(fkey, v));
+    el.appendChild(btn);
+  });
+}
+
+function toggleFilter(fkey, val) {
+  if (val === 'All') {
+    F[fkey] = ['All'];
+  } else {
+    F[fkey] = F[fkey].filter(v => v !== 'All');
+    if (F[fkey].includes(val)) {
+      F[fkey] = F[fkey].filter(v => v !== val);
+      if (F[fkey].length === 0) F[fkey] = ['All'];
+    } else {
+      F[fkey].push(val);
+    }
+  }
+  // Update button states
+  document.querySelectorAll(`[data-fkey="${fkey}"]`).forEach(btn => {
+    btn.classList.toggle('on', F[fkey].includes(btn.dataset.val));
+  });
+  render();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CORE AGGREGATION ENGINE
+// ═══════════════════════════════════════════════════════════════════════════
+function aggregate() {
+  const rs = F.regions.includes('All')   ? D.regions   : F.regions;
+  const ds = F.divisions.includes('All') ? D.divisions : F.divisions;
+  const ms = F.months.includes('All')    ? D.months    : F.months;
+
+  let totalRev=0, totalQty=0, totalInv=0;
+  const monthRevMap={}, catMap={}, stateMap={}, zoneMap={}, divMap={}, skuMap={};
+  const distMap={};  // name -> {rev,inv,place,months:Set,monthlyRev:{}}
+
+  for (const r of rs) {
+    if (!D.atomic[r]) continue;
+    for (const d of ds) {
+      if (!D.atomic[r][d]) continue;
+      for (const m of ms) {
+        const atom = D.atomic[r][d][m];
+        if (!atom) continue;
+
+        totalRev += atom.rev;
+        totalQty += atom.qty;
+        totalInv += atom.inv;
+        monthRevMap[m] = (monthRevMap[m]||0) + atom.rev;
+
+        for (const [k,v] of Object.entries(atom.cat   ||{})) catMap[k]   = (catMap[k]  ||0)+v;
+        for (const [k,v] of Object.entries(atom.state ||{})) stateMap[k] = (stateMap[k]||0)+v;
+        for (const [k,v] of Object.entries(atom.zone  ||{})) zoneMap[k]  = (zoneMap[k] ||0)+v;
+        for (const [k,v] of Object.entries(atom.div   ||{})) divMap[k]   = (divMap[k]  ||0)+v;
+        for (const [k,v] of Object.entries(atom.sku   ||{})) skuMap[k]   = (skuMap[k]  ||0)+v;
+
+        for (const [name, info] of Object.entries(atom.dist||{})) {
+          if (!distMap[name]) distMap[name]={rev:0,inv:0,place:info.p,months:new Set(),monthlyRev:{}};
+          distMap[name].rev += info.r;
+          distMap[name].inv += info.i;
+          distMap[name].months.add(m);
+          distMap[name].monthlyRev[m] = (distMap[name].monthlyRev[m]||0) + info.r;
+        }
+      }
+    }
+  }
+
+  // Chronological monthly array (show all months always for trend chart)
+  const allMonthlyArr = D.months.map(m => ({m, v: round(monthRevMap[m]||0)}));
+  // Filtered monthly (for single-month selection display)
+  const filtMonthlyArr = ms.map(m => ({m, v: round(monthRevMap[m]||0)}));
+
+  // Active distributors (billed in at least one of last 3 months of FULL dataset)
+  const last3Set = new Set(D.lastMonths);
+  const activeDistCount = Object.values(distMap)
+    .filter(d => [...d.months].some(m => last3Set.has(m))).length;
+
+  // Top 10 distributors
+  const topDist = Object.entries(distMap)
+    .sort((a,b) => b[1].rev - a[1].rev).slice(0, 10);
+
+  return {
+    totalRev: round(totalRev), totalQty, totalInv,
+    distributors: Object.keys(distMap).length,
+    activeDistCount,
+    allMonthlyArr, filtMonthlyArr,
+    catMap, stateMap, zoneMap, divMap, skuMap,
+    topDist, distMap
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MoM / YoY GROWTH
+// ═══════════════════════════════════════════════════════════════════════════
+function growthBadge(arr) {
+  // Compare last two months available in current selection
+  const nonzero = arr.filter(x => x.v > 0);
+  if (nonzero.length < 2) return null;
+  const curr = nonzero[nonzero.length-1].v;
+  const prev = nonzero[nonzero.length-2].v;
+  if (prev === 0) return null;
+  const pct = ((curr-prev)/prev*100).toFixed(1);
+  return { pct: parseFloat(pct), label: nonzero[nonzero.length-1].m, prev: nonzero[nonzero.length-2].m };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CUMULATIVE BY FINANCIAL YEAR
+// ═══════════════════════════════════════════════════════════════════════════
+function computeCumulative(monthlyArr) {
+  const fyMap = {};
+  for (const {m, v} of monthlyArr) {
+    if (v === 0) continue;
+    const [mon, yr] = m.split('-');
+    const mn = MONTH_NUM[mon]||1, year = 2000+parseInt(yr);
+    const fy = mn >= 4 ? `FY${year}-${String(year+1).slice(2)}` : `FY${year-1}-${String(year).slice(2)}`;
+    if (!fyMap[fy]) fyMap[fy] = [];
+    fyMap[fy].push({m, v});
+  }
+  const result = {};
+  for (const [fy, items] of Object.entries(fyMap)) {
+    let cum=0;
+    result[fy] = items.map(({m,v}) => { cum+=v; return {m, v:round(cum)}; });
+  }
+  return result;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DISTRIBUTOR HEALTH
+// ═══════════════════════════════════════════════════════════════════════════
+function computeHealth(distMap) {
+  const last3Set = new Set(D.lastMonths);
+  return Object.entries(distMap).map(([name, info]) => {
+    const sortedM = [...info.months].sort((a,b)=>msk(a)-msk(b));
+    const isActive = sortedM.some(m => last3Set.has(m));
+    const lastMonth = sortedM[sortedM.length-1] || '';
+    let trend = 'flat';
+    if (sortedM.length >= 3) {
+      const r = info.monthlyRev[sortedM[sortedM.length-1]]||0;
+      const o = info.monthlyRev[sortedM[sortedM.length-3]]||0;
+      if (r > o*1.1) trend='growing'; else if (r < o*0.9) trend='declining';
+    } else if (sortedM.length === 1) { trend='new'; }
+    // Last 3 months revenue for sparkline column
+    const last3Months = D.lastMonths;
+    const last3Rev = last3Months.map(m => info.monthlyRev[m]||0);
+    return {name, ...info, sortedM, isActive, lastMonth, trend, last3Rev, last3Months};
+  }).sort((a,b) => b.rev - a.rev);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CHART MODE
+// ═══════════════════════════════════════════════════════════════════════════
+function setChartMode(mode) {
+  CHART_MODE = mode;
+  document.getElementById('tp-monthly').classList.toggle('on', mode==='monthly');
+  document.getElementById('tp-cumulative').classList.toggle('on', mode==='cumulative');
+  render();
+}
+
+function setHealthFilter(mode) {
+  HEALTH_FILTER = mode;
+  ['all','active','inactive'].forEach(m => {
+    const el = document.getElementById(`dh-${m}-btn`);
+    if(el) el.classList.toggle('on', m===mode);
+  });
+  render();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DISTRIBUTOR SORT
+// ═══════════════════════════════════════════════════════════════════════════
+function sortHealthBy(col) {
+  if (HEALTH_SORT.col === col) {
+    HEALTH_SORT.dir = HEALTH_SORT.dir === 'desc' ? 'asc' : 'desc';
+  } else {
+    HEALTH_SORT.col = col;
+    HEALTH_SORT.dir = col === 'name' ? 'asc' : 'desc';
+  }
+  // Update header indicators
+  const cols = ['name','status','trend','lastMonth','rev','inv'];
+  cols.forEach(c => {
+    const el = document.getElementById('si-'+c);
+    if (!el) return;
+    const th = el.closest('th');
+    if (c === HEALTH_SORT.col) {
+      el.textContent  = HEALTH_SORT.dir === 'desc' ? '▼' : '▲';
+      el.style.opacity = '1';
+      if (th) th.classList.add('sort-active');
+    } else {
+      el.textContent  = '';
+      el.style.opacity = '.7';
+      if (th) th.classList.remove('sort-active');
+    }
+  });
+  render();
+}
+
+function applyHealthSort(arr) {
+  const { col, dir } = HEALTH_SORT;
+  const TREND_ORDER = { growing:0, flat:1, new:2, declining:3 };
+  return [...arr].sort((a, b) => {
+    let va, vb;
+    switch(col) {
+      case 'name':      va = a.name.toLowerCase();   vb = b.name.toLowerCase();  break;
+      case 'status':    va = a.isActive ? 0 : 1;     vb = b.isActive ? 0 : 1;   break;
+      case 'trend':     va = TREND_ORDER[a.trend]??9; vb = TREND_ORDER[b.trend]??9; break;
+      case 'lastMonth': va = msk(a.lastMonth||'');   vb = msk(b.lastMonth||''); break;
+      case 'inv':       va = a.inv;                  vb = b.inv;                break;
+      default:          va = a.rev;                  vb = b.rev;                // 'rev'
+    }
+    if (va < vb) return dir === 'asc' ? -1 :  1;
+    if (va > vb) return dir === 'asc' ?  1 : -1;
+    return 0;
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TAB SWITCHING
+// ═══════════════════════════════════════════════════════════════════════════
+function switchTab(tab, btn) {
+  ACTIVE_TAB = tab;
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  if(btn) btn.classList.add('active');
+  render();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════════════════════════════════════
+function render() {
+  const agg = aggregate();
+  renderOverview(agg);
+  if (ACTIVE_TAB === 'products')     renderProducts(agg);
+  if (ACTIVE_TAB === 'distributors') renderDistributors(agg);
+  if (ACTIVE_TAB === 'manpower')     renderManpower();
+  if (ACTIVE_TAB === 'targets')      renderTargets();
+  if (ACTIVE_TAB === 'geography')    renderGeography(agg);
+  if (ACTIVE_TAB === 'zones')        renderZones(agg);
+  if (ACTIVE_TAB === 'seasonality')  renderSeasonality();
+  // Show/hide new tab buttons based on data availability
+  const hasMp = D.manpower && D.manpower.length > 0;
+  const hasTgt= D.distTargets && Object.keys(D.distTargets).length > 0;
+  const mpBtn = document.getElementById('tab-btn-manpower');
+  const tgtBtn= document.getElementById('tab-btn-targets');
+  if(mpBtn)  mpBtn.style.display  = hasMp  ? '' : 'none';
+  if(tgtBtn) tgtBtn.style.display = hasTgt ? '' : 'none';
+}
+
+// ── OVERVIEW ─────────────────────────────────────────────────────────────────
+function renderOverview(agg) {
+  // KPIs
+  document.getElementById('k-rev').textContent   = '₹'+fmt(agg.totalRev)+'L';
+  document.getElementById('k-qty').textContent   = fmtQty(agg.totalQty);
+  document.getElementById('k-inv').textContent   = agg.totalInv.toLocaleString();
+  document.getElementById('k-dist').textContent  = agg.distributors;
+  document.getElementById('k-active').textContent= agg.activeDistCount;
+
+  // MoM growth badge
+  const momEl = document.getElementById('k-rev-mom');
+  const g = growthBadge(agg.allMonthlyArr);
+  if (g) {
+    const arrow = g.pct > 0 ? '▲' : '▼';
+    const cls   = g.pct > 0 ? 'up' : (g.pct < 0 ? 'dn' : 'flat');
+    momEl.className = 'kpi-growth '+cls;
+    momEl.textContent = `${arrow} ${Math.abs(g.pct)}% vs ${g.prev}`;
+  } else { momEl.textContent = ''; }
+
+  // Monthly / Cumulative chart
+  destroy('monthly');
+  const ms = F.months.includes('All') ? D.months : F.months;
+  let labels, datasets;
+
+  if (CHART_MODE === 'cumulative') {
+    const cum = computeCumulative(agg.allMonthlyArr);
+    const fyKeys = Object.keys(cum);
+    datasets = fyKeys.map((fy, fi) => {
+      const items = cum[fy];
+      const colorBase = [PAL[0], PAL[1], PAL[2]][fi % 3];
+      return {
+        label: fy,
+        data: items.map(x=>({x: x.m, y: x.v})),
+        borderColor: colorBase,
+        backgroundColor: colorBase+'33',
+        fill: true, tension: 0.4, borderWidth: 2.5, pointRadius: 4,
+        type: 'line'
+      };
+    });
+    labels = D.months;
+  } else {
+    const arr = F.months.includes('All') ? agg.allMonthlyArr : agg.filtMonthlyArr;
+    labels = arr.map(x=>x.m);
+    const vals = arr.map(x=>x.v);
+    datasets = [
+      { label:'Revenue (₹L)', data:vals, type:'bar',
+        backgroundColor: labels.map((_,i)=>`rgba(26,86,219,${Math.min(0.4+i*0.06,0.85)})`),
+        borderRadius:6, order:2 },
+      { label:'Trend', data:vals, type:'line',
+        borderColor:'#7e3af2', backgroundColor:'transparent',
+        borderWidth:2.5, pointBackgroundColor:'#7e3af2', pointRadius:4, tension:0.4, order:1 }
+    ];
+  }
+
+  CH.monthly = new Chart(document.getElementById('ch-monthly'), {
+    type: 'bar',
+    data: { labels, datasets },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display: CHART_MODE==='cumulative', position:'top'},
+        tooltip:{callbacks:{label:ctx=>' ₹'+fmt(ctx.raw)+'L'}} },
+      scales:{
+        x:{grid:{display:false}, border:{display:false}},
+        y:{grid:{color:'#f3f4f6'}, border:{display:false}, ticks:{callback:v=>'₹'+v+'L'}}
+      }
+    }
+  });
+
+  // Division donut
+  const divEntries = Object.entries(agg.divMap).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
+  destroy('division');
+  CH.division = new Chart(document.getElementById('ch-division'), {
+    type:'doughnut',
+    data:{ labels:divEntries.map(x=>x[0]),
+      datasets:[{data:divEntries.map(x=>x[1]),
+        backgroundColor:divEntries.map((_,i)=>PAL[i%PAL.length]),
+        borderWidth:0, hoverOffset:6}] },
+    options:{ responsive:true, maintainAspectRatio:false, cutout:'62%',
+      plugins:{ legend:{position:'right',labels:{padding:10,usePointStyle:true,pointStyleWidth:8}},
+        tooltip:{callbacks:{label:ctx=>' ₹'+fmt(ctx.raw)+'L'}} } }
+  });
+
+  // Stacked bar
+  const stackMs = F.months.includes('All') ? D.months : F.months;
+  const stackCats = D.categories.filter(c => {
+    return stackMs.some(m => {
+      const rs2 = F.regions.includes('All') ? D.regions : F.regions;
+      const ds2 = F.divisions.includes('All') ? D.divisions : F.divisions;
+      return rs2.some(r => ds2.some(d => (D.atomic[r]?.[d]?.[m]?.cat?.[c]||0)>0));
+    });
+  });
+  const stackDatasets = stackCats.map((cat,i) => {
+    const vals = stackMs.map(m => {
+      let v=0;
+      const rs2 = F.regions.includes('All') ? D.regions : F.regions;
+      const ds2 = F.divisions.includes('All') ? D.divisions : F.divisions;
+      for(const r of rs2) for(const d of ds2) v += D.atomic[r]?.[d]?.[m]?.cat?.[cat]||0;
+      return round(v);
+    });
+    return { label:cat, data:vals,
+             backgroundColor: CAT_COLOR[cat]||PAL[i%PAL.length], stack:'s' };
+  });
+  destroy('stacked');
+  CH.stacked = new Chart(document.getElementById('ch-stacked'), {
+    type:'bar',
+    data:{ labels:stackMs, datasets:stackDatasets },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:true, position:'bottom',
+        labels:{padding:8,usePointStyle:true,pointStyleWidth:8,font:{size:10}}},
+        tooltip:{callbacks:{label:ctx=>' '+ctx.dataset.label+': ₹'+fmt(ctx.raw)+'L'}} },
+      scales:{ x:{stacked:true,grid:{display:false},border:{display:false}},
+               y:{stacked:true,grid:{color:'#f3f4f6'},border:{display:false},
+                  ticks:{callback:v=>'₹'+v+'L'}} } }
+  });
+
+  // Category donut
+  const catEntries = Object.entries(agg.catMap).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
+  destroy('category');
+  CH.category = new Chart(document.getElementById('ch-category'), {
+    type:'doughnut',
+    data:{ labels:catEntries.map(x=>x[0]),
+      datasets:[{data:catEntries.map(x=>x[1]),
+        backgroundColor:catEntries.map(([l])=>CAT_COLOR[l]||'#ccc'),
+        borderWidth:0, hoverOffset:6}] },
+    options:{ responsive:true, maintainAspectRatio:false, cutout:'58%',
+      plugins:{ legend:{position:'bottom',labels:{padding:8,usePointStyle:true,pointStyleWidth:8,font:{size:10}}},
+        tooltip:{callbacks:{label:ctx=>{
+          const p=agg.totalRev>0?((ctx.raw/agg.totalRev)*100).toFixed(1)+'%':'—';
+          return ' ₹'+fmt(ctx.raw)+'L ('+p+')';
+        }}} } }
+  });
+
+  // State bar
+  const stateArr = Object.entries(agg.stateMap).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
+  destroy('state');
+  CH.state = new Chart(document.getElementById('ch-state'), {
+    type:'bar',
+    data:{ labels:stateArr.map(x=>x[0]),
+      datasets:[{label:'₹L', data:stateArr.map(x=>x[1]),
+        backgroundColor:stateArr.map((_,i)=>`hsl(220,${70+i*2}%,${55-i*2}%)`),
+        borderRadius:5, barThickness:18}] },
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{callbacks:{label:ctx=>' ₹'+fmt(ctx.raw)+'L'}} },
+      scales:{ x:{grid:{color:'#f3f4f6'},border:{display:false},ticks:{callback:v=>'₹'+v}},
+               y:{grid:{display:false},border:{display:false}} } }
+  });
+
+  // Zone bar
+  const zoneArr = Object.entries(agg.zoneMap).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
+  destroy('zone');
+  CH.zone = new Chart(document.getElementById('ch-zone'), {
+    type:'bar',
+    data:{ labels:zoneArr.map(x=>x[0]),
+      datasets:[{label:'₹L', data:zoneArr.map(x=>x[1]),
+        backgroundColor:zoneArr.map((_,i)=>PAL[i%PAL.length]),
+        borderRadius:5, barThickness:16}] },
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{callbacks:{label:ctx=>' ₹'+fmt(ctx.raw)+'L'}} },
+      scales:{ x:{grid:{color:'#f3f4f6'},border:{display:false},ticks:{callback:v=>'₹'+v}},
+               y:{grid:{display:false},border:{display:false}} } }
+  });
+
+  // Top distributors table with invoices
+  const tbody = document.getElementById('dist-tbody');
+  if (!agg.topDist.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#9ca3af;padding:20px">No data for this selection</td></tr>';
+  } else {
+    const maxV = Math.max(...agg.topDist.map(([,d])=>d.rev));
+    tbody.innerHTML = agg.topDist.map(([lbl,d],i) => {
+      const bw = Math.round((d.rev/maxV)*160);
+      return `<tr>
+        <td style="font-weight:700;color:#9ca3af">${i+1}</td>
+        <td><strong>${lbl}</strong>${d.place?`<br><span style="font-size:10px;color:#6b7280">${d.place}</span>`:''}</td>
+        <td>&#8377; ${fmt(d.rev)} L</td>
+        <td>${d.inv.toLocaleString()}</td>
+        <td>${pct(d.rev, agg.totalRev)}</td>
+        <td><span class="mbar" style="width:${bw}px;background:var(--accent)"></span></td>
+      </tr>`;
+    }).join('');
+  }
+}
+
+// ── PRODUCTS TAB ─────────────────────────────────────────────────────────────
+function renderProducts(agg) {
+  document.getElementById('sku-chart-title').textContent = 'Revenue by '+D.skuLabel;
+  document.getElementById('sku-table-title').textContent = 'Top '+D.skuLabel+' — Ranked';
+
+  const skuArr = Object.entries(agg.skuMap).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
+
+  // SKU horizontal bar
+  destroy('sku');
+  CH.sku = new Chart(document.getElementById('ch-sku'), {
+    type:'bar',
+    data:{ labels:skuArr.map(x=>x[0]),
+      datasets:[{label:'₹L', data:skuArr.map(x=>x[1]),
+        backgroundColor:skuArr.map((_,i)=>PAL[i%PAL.length]),
+        borderRadius:5, barThickness:20}] },
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{callbacks:{label:ctx=>' ₹'+fmt(ctx.raw)+'L'}} },
+      scales:{ x:{grid:{color:'#f3f4f6'},border:{display:false},ticks:{callback:v=>'₹'+v+'L'}},
+               y:{grid:{display:false},border:{display:false}} } }
+  });
+
+  // Category donut (duplicate for this tab)
+  const catArr = Object.entries(agg.catMap).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
+  destroy('cat2');
+  CH.cat2 = new Chart(document.getElementById('ch-cat2'), {
+    type:'doughnut',
+    data:{ labels:catArr.map(x=>x[0]),
+      datasets:[{data:catArr.map(x=>x[1]),
+        backgroundColor:catArr.map(([l])=>CAT_COLOR[l]||'#ccc'),
+        borderWidth:0, hoverOffset:6}] },
+    options:{ responsive:true, maintainAspectRatio:false, cutout:'55%',
+      plugins:{ legend:{position:'bottom',labels:{padding:8,usePointStyle:true,pointStyleWidth:8}},
+        tooltip:{callbacks:{label:ctx=>' ₹'+fmt(ctx.raw)+'L'}} } }
+  });
+
+  // SKU table
+  const total = skuArr.reduce((s,[,v])=>s+v, 0);
+  const maxV  = skuArr.length ? skuArr[0][1] : 1;
+  document.getElementById('sku-tbody').innerHTML = skuArr.map(([lbl,v],i) => {
+    const bw = Math.round((v/maxV)*150);
+    return `<tr>
+      <td style="font-weight:700;color:#9ca3af">${i+1}</td>
+      <td><strong>${lbl}</strong></td>
+      <td>&#8377; ${fmt(v)} L</td>
+      <td>${pct(v, total)}</td>
+      <td><span class="mbar" style="width:${bw}px;background:var(--a2)"></span></td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="5" style="text-align:center;color:#9ca3af;padding:20px">No data</td></tr>';
+}
+
+// ── DISTRIBUTORS TAB ─────────────────────────────────────────────────────────
+function renderDistributors(agg) {
+  // Compute health using region/division filter only (ignore month for health)
+  const healthAgg = aggregateIgnoreMonth();
+  const health = computeHealth(healthAgg.distMap);
+
+  const total    = health.length;
+  const active   = health.filter(d=>d.isActive).length;
+  const inactive = total - active;
+
+  document.getElementById('dh-active').textContent   = active;
+  document.getElementById('dh-inactive').textContent = inactive;
+  document.getElementById('dh-total').textContent    = total;
+  document.getElementById('k-active').textContent    = agg.activeDistCount;
+
+  let filtered = health;
+  if (HEALTH_FILTER === 'active')   filtered = health.filter(d=>d.isActive);
+  if (HEALTH_FILTER === 'inactive') filtered = health.filter(d=>!d.isActive);
+  filtered = applyHealthSort(filtered);
+
+  const trendIcon = t => t==='growing' ? '<span class="trend-up">▲ Growing</span>'
+                       : t==='declining' ? '<span class="trend-dn">▼ Declining</span>'
+                       : t==='new' ? '<span class="trend-flat">★ New</span>'
+                       : '<span class="trend-flat">→ Stable</span>';
+
+  const statusBadge = d => d.isActive
+    ? '<span class="pill pill-green">Active</span>'
+    : '<span class="pill pill-red">Inactive</span>';
+
+  renderMultiDivDists(agg);
+  document.getElementById('health-tbody').innerHTML = filtered.map((d,i) => {
+    const maxL3 = Math.max(...d.last3Rev, 1);
+    const sparkCells = d.last3Rev.map((v,j) =>
+      `<span title="${d.last3Months[j]}: ₹${fmt(v)}L" style="display:inline-block;
+        height:${Math.max(4,Math.round((v/maxL3)*24))}px;width:10px;border-radius:2px;
+        background:${v>0?'var(--accent)':'#e5e7eb'};margin:0 1px;vertical-align:bottom"></span>`
+    ).join('');
+    return `<tr>
+      <td style="font-weight:700;color:#9ca3af">${i+1}</td>
+      <td><strong>${d.name}</strong>${d.place?`<br><span style="font-size:10px;color:#6b7280">${d.place}</span>`:''}</td>
+      <td>${statusBadge(d)}</td>
+      <td>${trendIcon(d.trend)}</td>
+      <td><span style="font-size:11px">${d.lastMonth||'—'}</span></td>
+      <td>&#8377; ${fmt(d.rev)} L</td>
+      <td>${d.inv.toLocaleString()}</td>
+      <td style="min-width:60px">${sparkCells}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="8" style="text-align:center;color:#9ca3af;padding:20px">No data</td></tr>';
+}
+
+function aggregateIgnoreMonth() {
+  // Same as aggregate() but always uses ALL months
+  const rs = F.regions.includes('All')   ? D.regions   : F.regions;
+  const ds = F.divisions.includes('All') ? D.divisions : F.divisions;
+  const ms = D.months; // ALL months for health
+
+  let totalRev=0;
+  const distMap={};
+  for (const r of rs) {
+    if (!D.atomic[r]) continue;
+    for (const d of ds) {
+      if (!D.atomic[r][d]) continue;
+      for (const m of ms) {
+        const atom = D.atomic[r][d][m];
+        if (!atom) continue;
+        totalRev += atom.rev;
+        for (const [name,info] of Object.entries(atom.dist||{})) {
+          if (!distMap[name]) distMap[name]={rev:0,inv:0,place:info.p,months:new Set(),monthlyRev:{}};
+          distMap[name].rev += info.r; distMap[name].inv += info.i;
+          distMap[name].months.add(m);
+          distMap[name].monthlyRev[m] = (distMap[name].monthlyRev[m]||0)+info.r;
+        }
+      }
+    }
+  }
+  return { totalRev: round(totalRev), distMap };
+}
+
+// ── GEOGRAPHY TAB ─────────────────────────────────────────────────────────────
+function renderGeography(agg) {
+  const stateArr = Object.entries(agg.stateMap).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
+  const total = stateArr.reduce((s,[,v])=>s+v, 0);
+  const maxV  = stateArr.length ? stateArr[0][1] : 1;
+
+  // Color: intensity from light to dark blue
+  const stateColors = stateArr.map(([,v]) => {
+    const ratio = v / maxV;
+    const lightness = Math.round(72 - ratio * 38);
+    return `hsl(220, 70%, ${lightness}%)`;
+  });
+
+  destroy('geo');
+  CH.geo = new Chart(document.getElementById('ch-geo'), {
+    type:'bar',
+    data:{ labels:stateArr.map(x=>x[0]),
+      datasets:[{ label:'₹L', data:stateArr.map(x=>x[1]),
+        backgroundColor: stateColors, borderRadius:5, barThickness:20 }] },
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false},
+        tooltip:{callbacks:{label:ctx=>' ₹'+fmt(ctx.raw)+'L ('+pct(ctx.raw,total)+')'}} },
+      scales:{ x:{grid:{color:'#f3f4f6'},border:{display:false},ticks:{callback:v=>'₹'+v+'L'}},
+               y:{grid:{display:false},border:{display:false}} } }
+  });
+
+  document.getElementById('geo-tbody').innerHTML = stateArr.map(([lbl,v],i) => {
+    const bw = Math.round((v/maxV)*130);
+    return `<tr>
+      <td style="font-weight:700;color:#9ca3af">${i+1}</td>
+      <td><strong>${lbl}</strong></td>
+      <td>&#8377; ${fmt(v)} L</td>
+      <td>${pct(v, total)}</td>
+      <td><span class="mbar" style="width:${bw}px;background:hsl(220,70%,45%)"></span></td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="5" style="text-align:center;color:#9ca3af;padding:20px">No data</td></tr>';
+}
+
+// ── ZONES TAB ────────────────────────────────────────────────────────────────
+function renderZones(agg) {
+  // ── Build zone-level aggregations ──────────────────────────────────────────
+  const rs = F.regions.includes('All')   ? D.regions   : F.regions;
+  const ds = F.divisions.includes('All') ? D.divisions : F.divisions;
+  const ms = F.months.includes('All')    ? D.months    : F.months;
+
+  // zone totals: zRevMap[zone], zInvMap[zone]
+  // zone×cat: zCatMap[zone][cat]
+  // zone×div: zDivMap[zone][div]
+  // zone×state: zStateMap[zone][state]
+  // zone×month: zMonthMap[zone][month]
+  const zRevMap={}, zInvMap={}, zCatMap={}, zDivMap={}, zStateMap={}, zMonthMap={};
+
+  for (const r of rs) {
+    if (!D.atomic[r]) continue;
+    for (const d of ds) {
+      if (!D.atomic[r][d]) continue;
+      for (const m of ms) {
+        const atom = D.atomic[r][d][m];
+        if (!atom) continue;
+
+        // plain zone revenue (from atom.zone)
+        for (const [z, v] of Object.entries(atom.zone||{})) {
+          zRevMap[z] = (zRevMap[z]||0) + v;
+          if (!zMonthMap[z]) zMonthMap[z] = {};
+          zMonthMap[z][m] = (zMonthMap[z][m]||0) + v;
+        }
+
+        // zone invoices
+        for (const [z, iv] of Object.entries(atom.zone_inv||{})) {
+          zInvMap[z] = (zInvMap[z]||0) + iv;
+        }
+
+        // zone × category
+        for (const [z, cats] of Object.entries(atom.zone_cat||{})) {
+          if (!zCatMap[z]) zCatMap[z] = {};
+          for (const [c, v] of Object.entries(cats))
+            zCatMap[z][c] = (zCatMap[z][c]||0) + v;
+        }
+
+        // zone × division
+        for (const [z, divs] of Object.entries(atom.zone_div||{})) {
+          if (!zDivMap[z]) zDivMap[z] = {};
+          for (const [dv, v] of Object.entries(divs))
+            zDivMap[z][dv] = (zDivMap[z][dv]||0) + v;
+        }
+
+        // zone × state
+        for (const [z, states] of Object.entries(atom.zone_state||{})) {
+          if (!zStateMap[z]) zStateMap[z] = {};
+          for (const [st, v] of Object.entries(states))
+            zStateMap[z][st] = (zStateMap[z][st]||0) + v;
+        }
+      }
+    }
+  }
+
+  const zones    = Object.keys(zRevMap).sort((a,b) => zRevMap[b]-zRevMap[a]);
+  const totalRev = zones.reduce((s,z) => s+zRevMap[z], 0);
+  const maxRev   = zones.length ? zRevMap[zones[0]] : 1;
+
+  // ── KPI summary cards (one per zone) ───────────────────────────────────────
+  const kpiRow = document.getElementById('zone-kpi-row');
+  const colCount = Math.min(zones.length, 6);
+  kpiRow.style.gridTemplateColumns = `repeat(${colCount}, 1fr)`;
+  kpiRow.innerHTML = zones.map((z, i) => {
+    const topCat = Object.entries(zCatMap[z]||{}).sort((a,b)=>b[1]-a[1])[0];
+    return `<div class="kpi" style="border-top:3px solid ${PAL[i%PAL.length]};border-radius:10px;cursor:pointer"
+        title="Click to deep-dive into ${z}"
+        onclick="enterZoneDeepDive('${z.replace(/'/g,"\\'")}')">
+      <div class="kpi-lbl" style="color:${PAL[i%PAL.length]}">${z} <span style="font-size:9px;opacity:.7">&#128269;</span></div>
+      <div class="kpi-val" style="color:${PAL[i%PAL.length]};font-size:20px">&#8377;${fmt(zRevMap[z])}L</div>
+      <div class="kpi-sub">${pct(zRevMap[z], totalRev)} of total</div>
+      ${topCat ? `<div style="font-size:10px;color:var(--muted);margin-top:3px">Top: ${topCat[0]}</div>` : ''}
+    </div>`;
+  }).join('');
+
+  // ── Zone revenue bar ────────────────────────────────────────────────────────
+  destroy('zone2');
+  CH.zone2 = new Chart(document.getElementById('ch-zone2'), {
+    type: 'bar',
+    data: {
+      labels: zones,
+      datasets: [{ label:'₹L', data: zones.map(z=>round(zRevMap[z])),
+        backgroundColor: zones.map((_,i) => PAL[i%PAL.length]),
+        borderRadius: 6, barThickness: 32 }]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false},
+        tooltip:{callbacks:{label:ctx=>' ₹'+fmt(ctx.raw)+'L ('+pct(ctx.raw,totalRev)+')'}} },
+      scales:{
+        x:{grid:{display:false}, border:{display:false}},
+        y:{grid:{color:'#f3f4f6'}, border:{display:false}, ticks:{callback:v=>'₹'+v+'L'}}
+      }
+    }
+  });
+
+  // ── Monthly trend by zone (stacked) ────────────────────────────────────────
+  const stackMs = F.months.includes('All') ? D.months : F.months;
+  destroy('zone-monthly');
+  CH['zone-monthly'] = new Chart(document.getElementById('ch-zone-monthly'), {
+    type: 'bar',
+    data: {
+      labels: stackMs,
+      datasets: zones.map((z, i) => ({
+        label: z,
+        data: stackMs.map(m => round(zMonthMap[z]?.[m]||0)),
+        backgroundColor: PAL[i%PAL.length],
+        stack: 's'
+      }))
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{display:true, position:'top',
+          labels:{padding:10, usePointStyle:true, pointStyleWidth:8, font:{size:10}}},
+        tooltip:{callbacks:{label:ctx=>' '+ctx.dataset.label+': ₹'+fmt(ctx.raw)+'L'}}
+      },
+      scales:{
+        x:{stacked:true, grid:{display:false}, border:{display:false}},
+        y:{stacked:true, grid:{color:'#f3f4f6'}, border:{display:false},
+           ticks:{callback:v=>'₹'+v+'L'}}
+      }
+    }
+  });
+
+  // ── Category mix per zone (stacked horizontal bar) ──────────────────────────
+  const allCats = D.categories.filter(c => zones.some(z => (zCatMap[z]?.[c]||0) > 0));
+  destroy('zone-cat');
+  CH['zone-cat'] = new Chart(document.getElementById('ch-zone-cat'), {
+    type: 'bar',
+    data: {
+      labels: zones,
+      datasets: allCats.map((cat, i) => ({
+        label: cat,
+        data: zones.map(z => round(zCatMap[z]?.[cat]||0)),
+        backgroundColor: CAT_COLOR[cat] || PAL[i%PAL.length],
+        stack: 's'
+      }))
+    },
+    options: {
+      indexAxis: 'y',
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{display:true, position:'bottom',
+          labels:{padding:8, usePointStyle:true, pointStyleWidth:8, font:{size:10}}},
+        tooltip:{callbacks:{label:ctx=>' '+ctx.dataset.label+': ₹'+fmt(ctx.raw)+'L'}}
+      },
+      scales:{
+        x:{stacked:true, grid:{color:'#f3f4f6'}, border:{display:false},
+           ticks:{callback:v=>'₹'+v+'L'}},
+        y:{stacked:true, grid:{display:false}, border:{display:false}}
+      }
+    }
+  });
+
+  // ── Division mix per zone (stacked horizontal bar) ──────────────────────────
+  const allDivs = D.divisions.filter(dv => zones.some(z => (zDivMap[z]?.[dv]||0) > 0));
+  destroy('zone-div');
+  CH['zone-div'] = new Chart(document.getElementById('ch-zone-div'), {
+    type: 'bar',
+    data: {
+      labels: zones,
+      datasets: allDivs.map((dv, i) => ({
+        label: dv,
+        data: zones.map(z => round(zDivMap[z]?.[dv]||0)),
+        backgroundColor: PAL[i%PAL.length],
+        stack: 's'
+      }))
+    },
+    options: {
+      indexAxis: 'y',
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{display:true, position:'bottom',
+          labels:{padding:8, usePointStyle:true, pointStyleWidth:8, font:{size:10}}},
+        tooltip:{callbacks:{label:ctx=>' '+ctx.dataset.label+': ₹'+fmt(ctx.raw)+'L'}}
+      },
+      scales:{
+        x:{stacked:true, grid:{color:'#f3f4f6'}, border:{display:false},
+           ticks:{callback:v=>'₹'+v+'L'}},
+        y:{stacked:true, grid:{display:false}, border:{display:false}}
+      }
+    }
+  });
+
+  // ── States within zones (grouped bar, top 4 states per zone) ────────────────
+  // collect top-N states across all zones
+  const allStatesFlat = {};
+  zones.forEach(z => {
+    Object.entries(zStateMap[z]||{}).forEach(([st,v]) => {
+      allStatesFlat[st] = (allStatesFlat[st]||0) + v;
+    });
+  });
+  const topStates = Object.entries(allStatesFlat)
+    .sort((a,b)=>b[1]-a[1]).slice(0,10).map(x=>x[0]);
+  destroy('zone-state');
+  CH['zone-state'] = new Chart(document.getElementById('ch-zone-state'), {
+    type: 'bar',
+    data: {
+      labels: topStates,
+      datasets: zones.map((z, i) => ({
+        label: z,
+        data: topStates.map(st => round(zStateMap[z]?.[st]||0)),
+        backgroundColor: PAL[i%PAL.length],
+        borderRadius: 3
+      }))
+    },
+    options: {
+      indexAxis: 'y',
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{display:true, position:'top',
+          labels:{padding:10, usePointStyle:true, pointStyleWidth:8, font:{size:10}}},
+        tooltip:{callbacks:{label:ctx=>' '+ctx.dataset.label+': ₹'+fmt(ctx.raw)+'L'}}
+      },
+      scales:{
+        x:{grid:{color:'#f3f4f6'}, border:{display:false}, ticks:{callback:v=>'₹'+v+'L'}},
+        y:{grid:{display:false}, border:{display:false}}
+      }
+    }
+  });
+
+  // ── Zone detail table ───────────────────────────────────────────────────────
+  document.getElementById('zone-tbody').innerHTML = zones.map((z, i) => {
+    const rev     = round(zRevMap[z]);
+    const inv     = zInvMap[z] || 0;
+    const topCat  = Object.entries(zCatMap[z]||{}).sort((a,b)=>b[1]-a[1])[0];
+    const bw      = Math.round((rev/maxRev)*140);
+    return `<tr>
+      <td style="font-weight:700;color:#9ca3af">${i+1}</td>
+      <td><strong style="color:${PAL[i%PAL.length]}">${z}</strong></td>
+      <td>&#8377; ${fmt(rev)} L</td>
+      <td>${inv.toLocaleString()}</td>
+      <td>${pct(rev, totalRev)}</td>
+      <td>${topCat ? `<span class="pill pill-blue">${topCat[0]}</span>` : '—'}</td>
+      <td><span class="mbar" style="width:${bw}px;background:${PAL[i%PAL.length]}"></span></td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="7" style="text-align:center;color:#9ca3af;padding:20px">No zone data for this selection</td></tr>';
+}
+
+// ── SEASONALITY TAB ──────────────────────────────────────────────────────────
+function renderSeasonality() {
+  buildHeatmap('heat-region',   D.regions,   'Region');
+  buildHeatmap('heat-division', D.divisions, 'Division');
+}
+
+function buildHeatmap(containerId, dims, dimLabel) {
+  const ms = D.months; // always all months for seasonality
+
+  // Build data matrix: heatData[month][dim] = revenue
+  const heatData = {};
+  let maxVal = 0;
+  for (const m of ms) {
+    heatData[m] = {};
+    for (const dim of dims) {
+      let v = 0;
+      const rs = dimLabel==='Region' ? [dim] : (F.regions.includes('All') ? D.regions : F.regions);
+      const ds = dimLabel==='Division' ? [dim] : (F.divisions.includes('All') ? D.divisions : F.divisions);
+      for (const r of rs) for (const d of ds) v += D.atomic[r]?.[d]?.[m]?.rev||0;
+      heatData[m][dim] = round(v);
+      if (v > maxVal) maxVal = v;
+    }
+  }
+
+  let html = `<table class="heatmap"><thead><tr>
+    <th>Month</th>
+    ${dims.map(d=>`<th>${d}</th>`).join('')}
+    <th>Total</th>
+  </tr></thead><tbody>`;
+
+  for (const m of ms) {
+    const rowTotal = dims.reduce((s,d)=>s+(heatData[m][d]||0), 0);
+    html += `<tr><td>${m}</td>`;
+    for (const dim of dims) {
+      const v = heatData[m][dim]||0;
+      const intensity = maxVal > 0 ? v/maxVal : 0;
+      const bg = v > 0
+        ? `hsl(220,${Math.round(50+intensity*30)}%,${Math.round(92-intensity*47)}%)`
+        : '#f9fafb';
+      const textColor = intensity > 0.65 ? '#fff' : '#111827';
+      html += `<td style="background:${bg};color:${textColor}" title="${dim} · ${m}: ₹${fmt(v)}L">
+        ${v > 0 ? '₹'+fmt(v) : '—'}</td>`;
+    }
+    const rowBg = rowTotal > 0 ? `hsl(220,60%,${Math.round(92-(rowTotal/maxVal)*47)}%)` : '#f9fafb';
+    const rowColor = (rowTotal/maxVal) > 0.65 ? '#fff' : '#111827';
+    html += `<td style="background:${rowBg};color:${rowColor};font-weight:700">₹${fmt(rowTotal)}</td></tr>`;
+  }
+
+  // Column totals row
+  html += '<tr><td style="font-weight:700">Total</td>';
+  dims.forEach(dim => {
+    const colTotal = ms.reduce((s,m)=>s+(heatData[m][dim]||0), 0);
+    html += `<td style="font-weight:700;background:#f0f2f5">₹${fmt(colTotal)}</td>`;
+  });
+  const grandTotal = dims.reduce((s,dim)=>s+ms.reduce((ss,m)=>ss+(heatData[m][dim]||0),0), 0);
+  html += `<td style="font-weight:700;background:#e5e7eb">₹${fmt(grandTotal)}</td></tr>`;
+
+  html += '</tbody></table>';
+  document.getElementById(containerId).innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MANPOWER VIEW TOGGLE
+// ═══════════════════════════════════════════════════════════════════════════
+function setMpView(v) {
+  MP_VIEW = v;
+  document.getElementById('mp-view-cards').classList.toggle('on', v==='cards');
+  document.getElementById('mp-view-table').classList.toggle('on', v==='table');
+  document.getElementById('mp-cards-view').style.display = v==='cards' ? '' : 'none';
+  document.getElementById('mp-table-view').style.display = v==='table' ? '' : 'none';
+  renderManpower();
+}
+
+function setTgtView(v) {
+  TGT_VIEW = v;
+  document.getElementById('tv-dist').classList.toggle('on', v==='dist');
+  document.getElementById('tv-person').classList.toggle('on', v==='person');
+  renderTargets();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MANPOWER TAB
+// ═══════════════════════════════════════════════════════════════════════════
+const DESIG_COLOR = {
+  'Business Head':'#1a56db','Sr.ASM':'#7e3af2','ASM':'#7e3af2',
+  'ASE':'#0ea5e9','Sr.CSO':'#059669','CSO':'#6b7280'
+};
+const DESIG_RANK = {'Business Head':5,'Sr.ASM':4,'ASM':4,'ASE':3,'Sr.CSO':2,'CSO':1};
+
+function getFilteredManpower() {
+  if (!D.manpower || !D.manpower.length) return [];
+  let mp = D.manpower.filter(p => p.st && p.st.toLowerCase() === 'active');
+  const rs = F.regions.includes('All')   ? null : F.regions;
+  const ds = F.divisions.includes('All') ? null : F.divisions;
+  if (rs) mp = mp.filter(p => rs.includes(p.u));
+  if (ds) mp = mp.filter(p => ds.includes(p.dv));
+  return mp;
+}
+
+function mpTotals(person) {
+  const ms = D.mpMonths || [];
+  const selMs = F.months.includes('All') ? ms : F.months.filter(m => ms.includes(m));
+  let t=0, a=0;
+  for (const m of (selMs.length ? selMs : ms)) {
+    const e = person.mo[m];
+    if (e) { t += e.t||0; a += e.a||0; }
+  }
+  return { t: round(t), a: round(a), pct: t>0 ? round((a/t)*100) : 0 };
+}
+
+function renderManpower() {
+  const mp = getFilteredManpower();
+  if (!mp.length) {
+    document.getElementById('mp-k-total').textContent = '0';
+    document.getElementById('mp-k-tgt').textContent = '—';
+    document.getElementById('mp-k-ach').textContent = '—';
+    document.getElementById('mp-k-pct').textContent = '—';
+    document.getElementById('mp-grid').innerHTML =
+      '<div style="color:var(--muted);padding:24px;grid-column:1/-1">No manpower data for this selection. Make sure Manpower Mapping.xlsx is in the Dashboard folder.</div>';
+    document.getElementById('mp-tbody').innerHTML = '';
+    return;
+  }
+  // Sort: highest hierarchy first
+  const sorted = [...mp].sort((a,b) => (DESIG_RANK[b.d]||0)-(DESIG_RANK[a.d]||0));
+
+  // KPIs
+  let allT=0, allA=0;
+  sorted.forEach(p => { const x=mpTotals(p); allT+=x.t; allA+=x.a; });
+  allT = round(allT); allA = round(allA);
+  document.getElementById('mp-k-total').textContent = mp.length;
+  document.getElementById('mp-k-tgt').textContent = allT ? '₹'+fmt(allT)+'L' : '—';
+  document.getElementById('mp-k-ach').textContent = allA ? '₹'+fmt(allA)+'L' : '—';
+  document.getElementById('mp-k-pct').textContent = allT>0 ? round((allA/allT)*100)+'%' : '—';
+
+  const tgtBarClass = pct => pct >= 100 ? 'over' : pct >= 80 ? 'near' : 'low';
+
+  // Cards view
+  document.getElementById('mp-grid').innerHTML = sorted.map((p, idx) => {
+    const {t, a, pct: pc} = mpTotals(p);
+    const col = DESIG_COLOR[p.d] || '#6b7280';
+    const barW = Math.min(pc, 100);
+    const noData = !t && !a;
+    return `<div class="mp-card" style="border-left-color:${col}"
+        onclick="openPersonModal(${D.manpower.indexOf(p)})">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div class="mp-card-name">${p.n}</div>
+        <span class="desig-badge" style="background:${col};font-size:10px">${p.d}</span>
+      </div>
+      <div class="mp-card-meta">${[p.z,p.u,p.pl].filter(Boolean).join(' · ')}</div>
+      ${noData ? `<div style="font-size:10px;color:var(--muted);font-style:italic">No target data for selection</div>` :
+      `<div class="mp-progress">
+        <div class="mp-pct" style="color:${col}">${pc}% achieved</div>
+        <div class="tgt-bar-wrap"><div class="tgt-bar ${tgtBarClass(pc)}" style="width:${barW}%"></div></div>
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:3px">
+          <span>T: ₹${fmt(t)}L</span><span>A: ₹${fmt(a)}L</span>
+        </div>
+      </div>`}
+      ${p.dr.length ? `<div style="font-size:10px;color:var(--muted);margin-top:6px">&#128101; ${p.dr.length} direct report${p.dr.length>1?'s':''}</div>` : ''}
+    </div>`;
+  }).join('');
+
+  // Table view
+  document.getElementById('mp-tbody').innerHTML = sorted.map((p, i) => {
+    const {t, a, pct: pc} = mpTotals(p);
+    const col = DESIG_COLOR[p.d] || '#6b7280';
+    return `<tr style="cursor:pointer" onclick="openPersonModal(${D.manpower.indexOf(p)})">
+      <td style="color:#9ca3af;font-weight:700">${i+1}</td>
+      <td><strong>${p.n}</strong></td>
+      <td><span class="desig-badge" style="background:${col}">${p.d}</span></td>
+      <td>${p.z||'—'}</td><td>${p.u||'—'}</td>
+      <td>${t ? '₹'+fmt(t)+'L' : '—'}</td>
+      <td>${a ? '₹'+fmt(a)+'L' : '—'}</td>
+      <td>${t>0 ? `<span style="font-weight:700;color:${pc>=100?'var(--green)':pc>=80?'var(--amber)':'var(--red)'}">${pc}%</span>` : '—'}</td>
+      <td><span class="pill ${p.st.toLowerCase()==='active'?'pill-green':'pill-red'}">${p.st}</span></td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="9" style="text-align:center;color:#9ca3af;padding:20px">No data</td></tr>';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TARGETS TAB
+// ═══════════════════════════════════════════════════════════════════════════
+function renderTargets() {
+  const dt = D.distTargets || {};
+  const mpMonths = D.mpMonths || [];
+  const rs = F.regions.includes('All') ? null : F.regions;
+  const ds = F.divisions.includes('All') ? null : F.divisions;
+  const ms = F.months.includes('All') ? mpMonths : F.months.filter(m=>mpMonths.includes(m));
+  const useMs = ms.length ? ms : mpMonths;
+
+  if (!Object.keys(dt).length) {
+    document.getElementById('tgt-k-tgt').textContent = '—';
+    document.getElementById('tgt-k-ach').textContent = '—';
+    document.getElementById('tgt-k-pct').textContent = '—';
+    document.getElementById('tgt-tbody').innerHTML =
+      '<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:24px">No target data. Make sure Target Sheet.xlsx is in the Dashboard folder.</td></tr>';
+    return;
+  }
+
+  if (TGT_VIEW === 'dist') {
+    // Header
+    document.getElementById('tgt-thead').innerHTML =
+      `<th>#</th><th>Distributor</th><th>CSO</th><th>Division</th>` +
+      useMs.map(m=>`<th>${m}<br><span style="font-size:9px;color:var(--muted);font-weight:400">T / A / %</span></th>`).join('') +
+      `<th>Total Target</th><th>Total Ach</th><th>%</th>`;
+
+    let grandT=0, grandA=0;
+    const rows = [];
+    for (const [sname, divData] of Object.entries(dt)) {
+      const cso = D.csoMap?.[sname] || '—';
+      // Region/division filter: find person's unit
+      if (rs) {
+        const mp = D.manpower?.find(p=>p.n===cso);
+        if (mp && !rs.includes(mp.u)) continue;
+      }
+      for (const [div, moData] of Object.entries(divData)) {
+        if (ds && !ds.includes(div)) continue;
+        let rowT=0, rowA=0;
+        const cells = useMs.map(m => {
+          const e = moData[m];
+          const t = e?.t||0, a = e?.a||0;
+          rowT+=t; rowA+=a;
+          const pc = t>0?Math.round((a/t)*100):null;
+          const col = pc==null?'var(--muted)':pc>=100?'var(--green)':pc>=80?'var(--amber)':'var(--red)';
+          return `<td style="white-space:nowrap">${t?'₹'+fmt(t):'-'} / ${a?'₹'+fmt(a):'-'} / <span style="color:${col};font-weight:700">${pc!=null?pc+'%':'—'}</span></td>`;
+        });
+        grandT+=rowT; grandA+=rowA;
+        const pc = rowT>0?Math.round((rowA/rowT)*100):null;
+        const col = pc==null?'':pc>=100?'var(--green)':pc>=80?'var(--amber)':'var(--red)';
+        rows.push({sname, cso, div, cells, rowT, rowA, pc, col});
+      }
+    }
+    rows.sort((a,b)=>b.rowT-a.rowT);
+    document.getElementById('tgt-k-tgt').textContent = '₹'+fmt(round(grandT))+'L';
+    document.getElementById('tgt-k-ach').textContent = '₹'+fmt(round(grandA))+'L';
+    document.getElementById('tgt-k-pct').textContent = grandT>0?Math.round((grandA/grandT)*100)+'%':'—';
+    document.getElementById('tgt-tbody').innerHTML = rows.map((r,i)=>
+      `<tr style="cursor:pointer" onclick="openDistModal('${r.sname.replace(/'/g,"\\'")}','${r.div}')">
+        <td style="color:#9ca3af;font-weight:700">${i+1}</td>
+        <td><strong>${r.sname}</strong></td>
+        <td style="font-size:11px;color:var(--muted)">${r.cso}</td>
+        <td><span class="pill pill-blue">${r.div}</span></td>
+        ${r.cells.join('')}
+        <td>₹${fmt(r.rowT)}L</td>
+        <td>₹${fmt(r.rowA)}L</td>
+        <td style="font-weight:700;color:${r.col}">${r.pc!=null?r.pc+'%':'—'}</td>
+      </tr>`
+    ).join('') || '<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:20px">No data for selection</td></tr>';
+
+  } else {
+    // By Person view
+    document.getElementById('tgt-thead').innerHTML =
+      `<th>#</th><th>Name</th><th>Designation</th><th>Zone / Unit</th>` +
+      useMs.map(m=>`<th>${m}<br><span style="font-size:9px;color:var(--muted);font-weight:400">T / A / %</span></th>`).join('') +
+      `<th>Total T</th><th>Total A</th><th>%</th>`;
+    const mp = getFilteredManpower().filter(p=>Object.keys(p.mo).length>0);
+    mp.sort((a,b)=>(DESIG_RANK[b.d]||0)-(DESIG_RANK[a.d]||0));
+    let grandT=0, grandA=0;
+    const rows = mp.map((p,i) => {
+      let rowT=0, rowA=0;
+      const cells = useMs.map(m => {
+        const e = p.mo[m];
+        const t=e?.t||0, a=e?.a||0;
+        rowT+=t; rowA+=a;
+        const pc = t>0?Math.round((a/t)*100):null;
+        const col = pc==null?'var(--muted)':pc>=100?'var(--green)':pc>=80?'var(--amber)':'var(--red)';
+        return `<td style="white-space:nowrap">${t?'₹'+fmt(t):'-'} / ${a?'₹'+fmt(a):'-'} / <span style="color:${col};font-weight:700">${pc!=null?pc+'%':'—'}</span></td>`;
+      });
+      grandT+=rowT; grandA+=rowA;
+      const pc = rowT>0?Math.round((rowA/rowT)*100):null;
+      const col2 = pc==null?'':pc>=100?'var(--green)':pc>=80?'var(--amber)':'var(--red)';
+      const col = DESIG_COLOR[p.d]||'#6b7280';
+      return `<tr style="cursor:pointer" onclick="openPersonModal(${D.manpower.indexOf(p)})">
+        <td style="color:#9ca3af;font-weight:700">${i+1}</td>
+        <td><strong>${p.n}</strong></td>
+        <td><span class="desig-badge" style="background:${col}">${p.d}</span></td>
+        <td style="font-size:11px;color:var(--muted)">${[p.z,p.u].filter(Boolean).join(' / ')}</td>
+        ${cells.join('')}
+        <td>₹${fmt(rowT)}L</td><td>₹${fmt(rowA)}L</td>
+        <td style="font-weight:700;color:${col2}">${pc!=null?pc+'%':'—'}</td>
+      </tr>`;
+    });
+    document.getElementById('tgt-k-tgt').textContent = '₹'+fmt(round(grandT))+'L';
+    document.getElementById('tgt-k-ach').textContent = '₹'+fmt(round(grandA))+'L';
+    document.getElementById('tgt-k-pct').textContent = grandT>0?Math.round((grandA/grandT)*100)+'%':'—';
+    document.getElementById('tgt-tbody').innerHTML = rows.join('') ||
+      '<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:20px">No data for selection</td></tr>';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MULTI-DIVISION DISTRIBUTORS
+// ═══════════════════════════════════════════════════════════════════════════
+function renderMultiDivDists(agg) {
+  const mdd = D.multiDivDists || {};
+  const card = document.getElementById('multi-div-card');
+  if (!Object.keys(mdd).length) { card.style.display='none'; return; }
+  card.style.display='';
+  const rows = Object.entries(mdd)
+    .map(([name, divs]) => {
+      const totalRev = divs.reduce((s, d) => {
+        let rv=0;
+        const rs2 = F.regions.includes('All') ? D.regions : F.regions;
+        for (const r of rs2) {
+          for (const m of D.months) {
+            rv += D.atomic[r]?.[d]?.[m]?.dist?.[name]?.r || 0;
+          }
+        }
+        return s+rv;
+      }, 0);
+      return {name, divs, totalRev};
+    })
+    .filter(x => x.totalRev > 0)
+    .sort((a,b)=>b.totalRev-a.totalRev);
+  document.getElementById('multi-div-tbody').innerHTML = rows.map((r,i) => {
+    const divRevs = r.divs.map(d => {
+      let rv=0;
+      const rs2 = F.regions.includes('All') ? D.regions : F.regions;
+      for (const r2 of rs2) for (const m of D.months) rv += D.atomic[r2]?.[d]?.[m]?.dist?.[r.name]?.r||0;
+      return `${d}: ₹${fmt(round(rv))}L`;
+    }).join(' · ');
+    return `<tr>
+      <td style="color:#9ca3af;font-weight:700">${i+1}</td>
+      <td><strong>${r.name}</strong></td>
+      <td>${r.divs.map(d=>`<span class="pill pill-blue" style="margin-right:3px">${d}</span>`).join('')}</td>
+      <td style="font-size:11px;color:var(--muted)">${divRevs}</td>
+      <td style="font-weight:700">₹${fmt(round(r.totalRev))}L</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px">No multi-division distributors in selection</td></tr>';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ZONE DEEP-DIVE
+// ═══════════════════════════════════════════════════════════════════════════
+function enterZoneDeepDive(zoneName) {
+  ZONE_DEEPDIVE = zoneName;
+  document.getElementById('zone-overview-view').style.display = 'none';
+  document.getElementById('zone-deepdive-view').style.display = '';
+  renderZoneDeepDive(zoneName);
+}
+
+function exitZoneDeepDive() {
+  ZONE_DEEPDIVE = null;
+  document.getElementById('zone-overview-view').style.display = '';
+  document.getElementById('zone-deepdive-view').style.display = 'none';
+}
+
+function renderZoneDeepDive(zoneName) {
+  const rs = F.regions.includes('All') ? D.regions : F.regions;
+  const ds = F.divisions.includes('All') ? D.divisions : F.divisions;
+  const ms = F.months.includes('All') ? D.months : F.months;
+
+  let zRev=0, zInv=0;
+  const moMap={}, catMap={}, divMap={}, distMap={};
+
+  for (const r of rs) {
+    if (!D.atomic[r]) continue;
+    for (const d of ds) {
+      if (!D.atomic[r][d]) continue;
+      for (const m of ms) {
+        const atom = D.atomic[r][d][m];
+        if (!atom) continue;
+        const zv = atom.zone?.[zoneName]||0;
+        if (!zv) continue;
+        zRev += zv;
+        moMap[m] = (moMap[m]||0) + zv;
+        // cats from zone_cat
+        for (const [c,v] of Object.entries(atom.zone_cat?.[zoneName]||{}))
+          catMap[c] = (catMap[c]||0)+v;
+        // divs from zone_div
+        for (const [dv,v] of Object.entries(atom.zone_div?.[zoneName]||{}))
+          divMap[dv] = (divMap[dv]||0)+v;
+        // invoices
+        zInv += atom.zone_inv?.[zoneName]||0;
+        // distributors in this zone
+        for (const [nm, info] of Object.entries(atom.dist||{})) {
+          if ((D.distZone?.[nm]||'') === zoneName) {
+            if (!distMap[nm]) distMap[nm]={rev:0,inv:0};
+            distMap[nm].rev += info.r; distMap[nm].inv += info.i;
+          }
+        }
+      }
+    }
+  }
+
+  // Manpower in zone
+  const mpInZone = (D.manpower||[]).filter(p=>p.z===zoneName && p.st.toLowerCase()==='active');
+
+  const moArr = ms.map(m=>({m, v:round(moMap[m]||0)}));
+  const topDists = Object.entries(distMap).sort((a,b)=>b[1].rev-a[1].rev).slice(0,10);
+
+  let html = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+      <div>
+        <div style="font-size:20px;font-weight:800;color:var(--text)">${zoneName} — Zone Deep Dive</div>
+        <div style="font-size:12px;color:var(--muted)">Click card headers to drill into each section</div>
+      </div>
+    </div>
+    <div class="kpis" style="grid-template-columns:repeat(4,1fr)">
+      <div class="kpi c1"><div class="kpi-lbl">Revenue</div>
+        <div class="kpi-val">₹${fmt(round(zRev))}L</div></div>
+      <div class="kpi c3"><div class="kpi-lbl">Invoices</div>
+        <div class="kpi-val">${zInv.toLocaleString()}</div></div>
+      <div class="kpi c4"><div class="kpi-lbl">Distributors</div>
+        <div class="kpi-val">${Object.keys(distMap).length}</div></div>
+      <div class="kpi c2"><div class="kpi-lbl">Manpower (Active)</div>
+        <div class="kpi-val">${mpInZone.length}</div></div>
+    </div>`;
+
+  // Monthly trend
+  html += `<div class="row2">
+    <div class="card">
+      <div class="ctitle">Monthly Revenue Trend</div>
+      <div class="csub">₹ Lakhs — ${zoneName}</div>
+      <div class="chart-wrap" style="height:200px"><canvas id="zdv-ch-monthly"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="ctitle">Division & Category Mix</div>
+      <div class="csub">Revenue breakdown within ${zoneName}</div>
+      <div class="chart-wrap" style="height:200px"><canvas id="zdv-ch-mix"></canvas></div>
+    </div>
+  </div>`;
+
+  // Distributor table
+  html += `<div class="card">
+    <div class="ctitle">Top Distributors in ${zoneName}</div>
+    <div class="csub">Based on distributor zone mapping</div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>#</th><th>Distributor</th><th>₹ Lakhs</th><th>Invoices</th><th>Visual</th></tr></thead>
+      <tbody>`;
+  const maxDistRev = topDists.length ? topDists[0][1].rev : 1;
+  html += topDists.map(([nm,info],i) => {
+    const bw = Math.round((info.rev/maxDistRev)*140);
+    return `<tr><td style="color:#9ca3af;font-weight:700">${i+1}</td>
+      <td><strong>${nm}</strong></td>
+      <td>₹${fmt(round(info.rev))}L</td><td>${info.inv}</td>
+      <td><span class="mbar" style="width:${bw}px;background:var(--accent)"></span></td></tr>`;
+  }).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:14px">No distributor zone data available</td></tr>';
+  html += `</tbody></table></div></div>`;
+
+  // Manpower in zone
+  if (mpInZone.length) {
+    html += `<div class="card">
+      <div class="ctitle">Manpower in ${zoneName}</div>
+      <div class="csub">Click a row to open deep-dive</div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>#</th><th>Name</th><th>Designation</th><th>Division</th><th>Target ₹L</th><th>Achievement ₹L</th><th>%</th></tr></thead>
+        <tbody>`;
+    mpInZone.sort((a,b)=>(DESIG_RANK[b.d]||0)-(DESIG_RANK[a.d]||0));
+    html += mpInZone.map((p,i) => {
+      const {t,a,pct:pc}=mpTotals(p);
+      const col=DESIG_COLOR[p.d]||'#6b7280';
+      const pc2col=pc>=100?'var(--green)':pc>=80?'var(--amber)':'var(--red)';
+      return `<tr style="cursor:pointer" onclick="openPersonModal(${D.manpower.indexOf(p)})">
+        <td style="color:#9ca3af">${i+1}</td>
+        <td><strong>${p.n}</strong></td>
+        <td><span class="desig-badge" style="background:${col}">${p.d}</span></td>
+        <td>${p.dv||'—'}</td>
+        <td>${t?'₹'+fmt(t)+'L':'—'}</td>
+        <td>${a?'₹'+fmt(a)+'L':'—'}</td>
+        <td style="font-weight:700;color:${pc>0?pc2col:'var(--muted)'}">${pc>0?pc+'%':'—'}</td>
+      </tr>`;
+    }).join('');
+    html += `</tbody></table></div></div>`;
+  }
+
+  // Target vs achievement for zone (from distTargets for dists in zone)
+  const zoneDistNames = Object.keys(distMap);
+  const zoneTgtRows = [];
+  for (const dn of zoneDistNames) {
+    const dd = D.distTargets?.[dn];
+    if (!dd) continue;
+    for (const [div, moData] of Object.entries(dd)) {
+      let t=0, a=0;
+      for (const m of (F.months.includes('All') ? D.mpMonths||[] : F.months)) {
+        t += moData[m]?.t||0; a += moData[m]?.a||0;
+      }
+      if (t||a) zoneTgtRows.push({dn, div, t:round(t), a:round(a)});
+    }
+  }
+  if (zoneTgtRows.length) {
+    zoneTgtRows.sort((a,b)=>b.t-a.t);
+    const gt=round(zoneTgtRows.reduce((s,r)=>s+r.t,0));
+    const ga=round(zoneTgtRows.reduce((s,r)=>s+r.a,0));
+    const gpc=gt>0?Math.round((ga/gt)*100):null;
+    html += `<div class="card">
+      <div style="display:flex;justify-content:space-between;margin-bottom:10px">
+        <div><div class="ctitle">Target vs Achievement — ${zoneName}</div>
+          <div class="csub">Zone total: Target ₹${fmt(gt)}L · Achievement ₹${fmt(ga)}L · ${gpc!=null?gpc+'%':'—'}</div>
+        </div>
+      </div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>#</th><th>Distributor</th><th>Division</th><th>Target ₹L</th><th>Achievement ₹L</th><th>%</th><th>Progress</th></tr></thead>
+        <tbody>${zoneTgtRows.map((r,i)=>{
+          const pc=r.t>0?Math.round((r.a/r.t)*100):null;
+          const col=pc==null?'var(--muted)':pc>=100?'var(--green)':pc>=80?'var(--amber)':'var(--red)';
+          const bw=r.t>0?Math.min(Math.round((r.a/r.t)*120),120):0;
+          return `<tr>
+            <td style="color:#9ca3af">${i+1}</td>
+            <td><strong>${r.dn}</strong></td>
+            <td><span class="pill pill-blue">${r.div}</span></td>
+            <td>₹${fmt(r.t)}L</td><td>₹${fmt(r.a)}L</td>
+            <td style="font-weight:700;color:${col}">${pc!=null?pc+'%':'—'}</td>
+            <td><div class="tgt-bar-wrap" style="width:120px"><div class="tgt-bar ${pc==null?'low':pc>=100?'over':pc>=80?'near':'low'}" style="width:${bw}px"></div></div></td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table></div>
+    </div>`;
+  }
+
+  document.getElementById('zdv-content').innerHTML = html;
+
+  // Render charts
+  setTimeout(() => {
+    // Monthly trend chart
+    const monCtx = document.getElementById('zdv-ch-monthly');
+    if (monCtx) {
+      destroy('zdv-monthly');
+      CH['zdv-monthly'] = new Chart(monCtx, {
+        type:'bar',
+        data:{ labels:moArr.map(x=>x.m),
+          datasets:[{label:'₹L', data:moArr.map(x=>x.v),
+            backgroundColor:'rgba(26,86,219,0.7)', borderRadius:5}] },
+        options:{ responsive:true, maintainAspectRatio:false,
+          plugins:{legend:{display:false}, tooltip:{callbacks:{label:ctx=>' ₹'+fmt(ctx.raw)+'L'}}},
+          scales:{x:{grid:{display:false},border:{display:false}},
+                  y:{grid:{color:'#f3f4f6'},border:{display:false},ticks:{callback:v=>'₹'+v+'L'}}} }
+      });
+    }
+    // Mix chart (divisions)
+    const mixCtx = document.getElementById('zdv-ch-mix');
+    if (mixCtx) {
+      destroy('zdv-mix');
+      const divEntries = Object.entries(divMap).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
+      CH['zdv-mix'] = new Chart(mixCtx, {
+        type:'doughnut',
+        data:{ labels:divEntries.map(x=>x[0]),
+          datasets:[{data:divEntries.map(x=>round(x[1])),
+            backgroundColor:divEntries.map((_,i)=>PAL[i%PAL.length]), borderWidth:0, hoverOffset:4}] },
+        options:{ responsive:true, maintainAspectRatio:false, cutout:'60%',
+          plugins:{ legend:{position:'right',labels:{padding:8,usePointStyle:true,pointStyleWidth:8,font:{size:10}}},
+            tooltip:{callbacks:{label:ctx=>' ₹'+fmt(ctx.raw)+'L'}} } }
+      });
+    }
+  }, 50);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PERSON MODAL
+// ═══════════════════════════════════════════════════════════════════════════
+function openPersonModal(idx) {
+  const p = D.manpower?.[idx];
+  if (!p) return;
+  const mpMonths = D.mpMonths || [];
+  const {t: totT, a: totA, pct: totPct} = mpTotals(p);
+  const col = DESIG_COLOR[p.d] || '#6b7280';
+
+  // Monthly chart data
+  const chartMs = mpMonths;
+  const chartT  = chartMs.map(m => p.mo[m]?.t||0);
+  const chartA  = chartMs.map(m => p.mo[m]?.a||0);
+
+  // Distributor breakdown (from distTargets)
+  const dbRows = [];
+  for (const db of p.cdb) {
+    // Try exact + fuzzy reverse: cdb contains target DB names
+    // Find matching entry in distTargets
+    let salesName = null;
+    for (const [sn, cso] of Object.entries(D.csoMap||{})) {
+      if (cso === p.n) {
+        const dd = D.distTargets?.[sn];
+        if (dd) {
+          for (const [div, moData] of Object.entries(dd)) {
+            let t=0, a=0;
+            for (const m of chartMs) { t+=moData[m]?.t||0; a+=moData[m]?.a||0; }
+            if (t||a) dbRows.push({sn, div, t:round(t), a:round(a), pc:t>0?Math.round((a/t)*100):null});
+          }
+        }
+        break;
+      }
+    }
+  }
+  dbRows.sort((a,b)=>b.t-a.t);
+
+  // SKU aggregate across their DBs
+  const skuMap = {};
+  for (const [sn, cso] of Object.entries(D.csoMap||{})) {
+    if (cso !== p.n) continue;
+    const dd = D.distTargets?.[sn];
+    if (!dd) continue;
+    for (const [div, moData] of Object.entries(dd)) {
+      for (const mo of chartMs) {
+        for (const [sku, vals] of Object.entries(moData[mo]?.sk||{})) {
+          const sk = skuMap[sku] || {t:0,a:0};
+          sk.t = round(sk.t+(vals.t||0)); sk.a = round(sk.a+(vals.a||0));
+          skuMap[sku] = sk;
+        }
+      }
+    }
+  }
+  const skuArr = Object.entries(skuMap).sort((a,b)=>b[1].t-a[1].t).slice(0,12);
+
+  let html = `
+    <div class="modal-hdr">
+      <span class="desig-badge" style="background:${col}">${p.d}</span>
+      <span class="modal-name">${p.n}</span>
+      ${p.z ? `<span class="pill pill-blue">${p.z}</span>` : ''}
+      ${p.u ? `<span class="pill pill-gray">${p.u}</span>` : ''}
+      <span class="pill ${p.st.toLowerCase()==='active'?'pill-green':'pill-red'}">${p.st}</span>
+    </div>
+    <div class="modal-kpis">
+      <div class="mkpi"><div class="mkpi-lbl">Total Target</div>
+        <div class="mkpi-val" style="color:${col}">₹${fmt(totT)}L</div></div>
+      <div class="mkpi"><div class="mkpi-lbl">Total Achievement</div>
+        <div class="mkpi-val" style="color:${col}">₹${fmt(totA)}L</div></div>
+      <div class="mkpi"><div class="mkpi-lbl">% Achieved</div>
+        <div class="mkpi-val" style="color:${totPct>=100?'var(--green)':totPct>=80?'var(--amber)':'var(--red)'}">${totT>0?totPct+'%':'—'}</div></div>
+      <div class="mkpi"><div class="mkpi-lbl">Reporting To</div>
+        <div class="mkpi-val" style="font-size:14px;color:var(--text)">${p.rt||'—'}</div></div>
+    </div>`;
+
+  if (chartMs.length) {
+    html += `<div class="modal-section-title">Monthly Target vs Achievement</div>
+    <div class="chart-wrap" style="height:200px"><canvas id="modal-ch-trend"></canvas></div>`;
+  }
+
+  if (dbRows.length) {
+    html += `<div class="modal-section-title">Distributor Breakdown</div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Distributor</th><th>Division</th><th>Target ₹L</th><th>Achievement ₹L</th><th>%</th><th>Progress</th></tr></thead>
+      <tbody>${dbRows.map(r=>{
+        const c=r.pc==null?'var(--muted)':r.pc>=100?'var(--green)':r.pc>=80?'var(--amber)':'var(--red)';
+        const bw=r.t>0?Math.min(Math.round((r.a/r.t)*100),100):0;
+        return `<tr>
+          <td><strong>${r.sn}</strong></td>
+          <td><span class="pill pill-blue">${r.div}</span></td>
+          <td>₹${fmt(r.t)}L</td><td>₹${fmt(r.a)}L</td>
+          <td style="font-weight:700;color:${c}">${r.pc!=null?r.pc+'%':'—'}</td>
+          <td><div class="tgt-bar-wrap" style="width:100px"><div class="tgt-bar ${r.pc==null?'low':r.pc>=100?'over':r.pc>=80?'near':'low'}" style="width:${bw}px"></div></div></td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table></div>`;
+  }
+
+  if (p.dr.length) {
+    const dirSubData = p.dr.map(name => {
+      const sub = D.manpower?.find(x=>x.n===name);
+      if (!sub) return null;
+      const {t,a,pct:pc}=mpTotals(sub);
+      return {name, d:sub.d, t, a, pc};
+    }).filter(Boolean);
+    if (dirSubData.length) {
+      html += `<div class="modal-section-title">Direct Reports Performance</div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Name</th><th>Designation</th><th>Target ₹L</th><th>Achievement ₹L</th><th>%</th></tr></thead>
+        <tbody>${dirSubData.map(r=>{
+          const col2=DESIG_COLOR[r.d]||'#6b7280';
+          const pc2col=r.pc>=100?'var(--green)':r.pc>=80?'var(--amber)':'var(--red)';
+          return `<tr>
+            <td><strong>${r.name}</strong></td>
+            <td><span class="desig-badge" style="background:${col2}">${r.d}</span></td>
+            <td>${r.t?'₹'+fmt(r.t)+'L':'—'}</td>
+            <td>${r.a?'₹'+fmt(r.a)+'L':'—'}</td>
+            <td style="font-weight:700;color:${r.t>0?pc2col:'var(--muted)'}">${r.t>0?r.pc+'%':'—'}</td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table></div>`;
+    }
+  }
+
+  if (skuArr.length) {
+    html += `<div class="modal-section-title">SKU Breakdown (across all DBs)</div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>SKU</th><th>Target ₹L</th><th>Achievement ₹L</th><th>%</th></tr></thead>
+      <tbody>${skuArr.map(([sku,vals])=>{
+        const pc=vals.t>0?Math.round((vals.a/vals.t)*100):null;
+        const c=pc==null?'var(--muted)':pc>=100?'var(--green)':pc>=80?'var(--amber)':'var(--red)';
+        return `<tr><td>${sku}</td><td>₹${fmt(vals.t)}L</td>
+          <td>₹${fmt(vals.a)}L</td>
+          <td style="font-weight:700;color:${c}">${pc!=null?pc+'%':'—'}</td></tr>`;
+      }).join('')}</tbody>
+    </table></div>`;
+  }
+
+  document.getElementById('modal-content').innerHTML = html;
+  document.getElementById('modal-overlay').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+
+  // Render trend chart
+  if (chartMs.length) {
+    setTimeout(()=>{
+      destroy('modal-trend');
+      CH['modal-trend'] = new Chart(document.getElementById('modal-ch-trend'), {
+        type:'bar',
+        data:{ labels:chartMs,
+          datasets:[
+            {type:'bar', label:'Target', data:chartT,
+              backgroundColor:'rgba(26,86,219,0.3)', borderRadius:4, order:2},
+            {type:'line', label:'Achievement', data:chartA,
+              borderColor:col, backgroundColor:col+'33', fill:true,
+              tension:0.4, borderWidth:2.5, pointRadius:4, pointBackgroundColor:col, order:1}
+          ]},
+        options:{ responsive:true, maintainAspectRatio:false,
+          plugins:{ legend:{display:true,position:'top',labels:{padding:10,usePointStyle:true,pointStyleWidth:8,font:{size:10}}},
+            tooltip:{callbacks:{label:ctx=>' ₹'+fmt(ctx.raw)+'L'}} },
+          scales:{ x:{grid:{display:false},border:{display:false}},
+                   y:{grid:{color:'#f3f4f6'},border:{display:false},ticks:{callback:v=>'₹'+v+'L'}} } }
+      });
+    }, 50);
+  }
+}
+
+function openDistModal(salesName, div) {
+  const dd = D.distTargets?.[salesName]?.[div];
+  if (!dd) return;
+  const cso = D.csoMap?.[salesName] || '—';
+  const mpMonths = D.mpMonths || [];
+
+  let totalT=0, totalA=0;
+  const skuAgg = {};
+  for (const m of mpMonths) {
+    totalT += dd[m]?.t||0; totalA += dd[m]?.a||0;
+    for (const [sk,vals] of Object.entries(dd[m]?.sk||{})) {
+      const e = skuAgg[sk]||{t:0,a:0};
+      e.t=round(e.t+(vals.t||0)); e.a=round(e.a+(vals.a||0));
+      skuAgg[sk] = e;
+    }
+  }
+  totalT=round(totalT); totalA=round(totalA);
+  const totPct = totalT>0?Math.round((totalA/totalT)*100):null;
+  const skuArr = Object.entries(skuAgg).sort((a,b)=>b[1].t-a[1].t);
+
+  let html = `
+    <div class="modal-hdr">
+      <span class="modal-name">${salesName}</span>
+      <span class="pill pill-blue">${div}</span>
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:14px">CSO: <strong>${cso}</strong></div>
+    <div class="modal-kpis">
+      <div class="mkpi"><div class="mkpi-lbl">Total Target</div>
+        <div class="mkpi-val">₹${fmt(totalT)}L</div></div>
+      <div class="mkpi"><div class="mkpi-lbl">Total Achievement</div>
+        <div class="mkpi-val">₹${fmt(totalA)}L</div></div>
+      <div class="mkpi"><div class="mkpi-lbl">% Achieved</div>
+        <div class="mkpi-val" style="color:${totPct==null?'var(--muted)':totPct>=100?'var(--green)':totPct>=80?'var(--amber)':'var(--red)'}">${totPct!=null?totPct+'%':'—'}</div></div>
+      <div class="mkpi"><div class="mkpi-lbl">Months w/ Target</div>
+        <div class="mkpi-val" style="color:var(--accent)">${Object.keys(dd).length}</div></div>
+    </div>
+    <div class="modal-section-title">Monthly Detail</div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Month</th><th>Target ₹L</th><th>Achievement ₹L</th><th>%</th><th>Progress</th></tr></thead>
+      <tbody>${mpMonths.map(m=>{
+        const e=dd[m]; if(!e) return '';
+        const pc=e.t>0?Math.round((e.a/e.t)*100):null;
+        const c=pc==null?'var(--muted)':pc>=100?'var(--green)':pc>=80?'var(--amber)':'var(--red)';
+        const bw=e.t>0?Math.min(Math.round((e.a/e.t)*100),100):0;
+        return `<tr><td>${m}</td><td>₹${fmt(e.t)}L</td><td>₹${fmt(e.a)}L</td>
+          <td style="font-weight:700;color:${c}">${pc!=null?pc+'%':'—'}</td>
+          <td><div class="tgt-bar-wrap" style="width:100px"><div class="tgt-bar ${pc==null?'low':pc>=100?'over':pc>=80?'near':'low'}" style="width:${bw}px"></div></div></td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table></div>
+    ${skuArr.length ? `
+    <div class="modal-section-title">SKU Breakdown</div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>SKU</th><th>Target ₹L</th><th>Achievement ₹L</th><th>%</th></tr></thead>
+      <tbody>${skuArr.map(([sk,vals])=>{
+        const pc=vals.t>0?Math.round((vals.a/vals.t)*100):null;
+        const c=pc==null?'var(--muted)':pc>=100?'var(--green)':pc>=80?'var(--amber)':'var(--red)';
+        return `<tr><td>${sk}</td><td>₹${fmt(vals.t)}L</td><td>₹${fmt(vals.a)}L</td>
+          <td style="font-weight:700;color:${c}">${pc!=null?pc+'%':'—'}</td></tr>`;
+      }).join('')}</tbody>
+    </table></div>` : ''}`;
+
+  document.getElementById('modal-content').innerHTML = html;
+  document.getElementById('modal-overlay').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal(event) {
+  if (event && event.target !== document.getElementById('modal-overlay')) return;
+  document.getElementById('modal-overlay').style.display = 'none';
+  document.body.style.overflow = '';
+  destroy('modal-trend');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// EXPORT TO EXCEL
+// ═══════════════════════════════════════════════════════════════════════════
+function exportExcel() {
+  const agg = aggregate();
+  const wb  = XLSX.utils.book_new();
+
+  // Sheet 1: Summary KPIs
+  const sumData = [
+    ['KLG Group — Primary Sales Dashboard Export'],
+    ['Generated:', D.generated],
+    ['Filters:', `Region: ${F.regions.join(',')} | Division: ${F.divisions.join(',')} | Month: ${F.months.join(',')}`],
+    [],
+    ['Metric', 'Value'],
+    ['Total Revenue (₹ Lakhs)', agg.totalRev],
+    ['Total Quantity', agg.totalQty],
+    ['Total Invoices', agg.totalInv],
+    ['Total Distributors', agg.distributors],
+    ['Active Distributors', agg.activeDistCount],
+  ];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sumData), 'Summary');
+
+  // Sheet 2: Monthly Revenue
+  const monthData = [['Month','Revenue (₹L)']];
+  agg.allMonthlyArr.forEach(({m,v}) => { if(v>0) monthData.push([m, v]); });
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(monthData), 'Monthly Revenue');
+
+  // Sheet 3: By State
+  const stateData = [['State','Revenue (₹L)']];
+  Object.entries(agg.stateMap).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1])
+    .forEach(([k,v]) => stateData.push([k, v]));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(stateData), 'By State');
+
+  // Sheet 4: By Category
+  const catData = [['Category','Revenue (₹L)']];
+  Object.entries(agg.catMap).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1])
+    .forEach(([k,v]) => catData.push([k, v]));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(catData), 'By Category');
+
+  // Sheet 5: Top Distributors
+  const distData = [['#','Distributor','Place','Revenue (₹L)','Invoices','% of Selection']];
+  agg.topDist.forEach(([lbl,d],i) => {
+    distData.push([i+1, lbl, d.place, d.rev, d.inv, agg.totalRev>0?((d.rev/agg.totalRev)*100).toFixed(1)+'%':'—']);
+  });
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(distData), 'Top Distributors');
+
+  // Sheet 6: Distributor Health
+  const healthAgg = aggregateIgnoreMonth();
+  const health = computeHealth(healthAgg.distMap);
+  const healthData = [['#','Distributor','Place','Status','Trend','Last Billed','Revenue (₹L)','Invoices']];
+  health.forEach((d,i) => {
+    healthData.push([i+1, d.name, d.place, d.isActive?'Active':'Inactive', d.trend, d.lastMonth, d.rev, d.inv]);
+  });
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(healthData), 'Distributor Health');
+
+  const ts = new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, `KLG_Dashboard_${ts}.xlsx`);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════════════════
+(function init() {
+  const dateRange = D.months.length > 1
+    ? D.months[0]+' – '+D.months[D.months.length-1] : (D.months[0]||'');
+  document.getElementById('hdr-sub').textContent =
+    dateRange+' · '+D.regions.join(' & ')+' · Source: In Lakhs column';
+  document.getElementById('hdr-badges').innerHTML =
+    `<span class="badge">Primary Sale</span>
+     <span class="badge">${D.months.length} Month${D.months.length!==1?'s':''}</span>
+     <span class="badge">${D.regions.length} Region${D.regions.length!==1?'s':''}</span>`;
+  document.getElementById('footer-txt').textContent =
+    'KLG Group · Primary Sales Dashboard · '+dateRange+' · Generated: '+D.generated;
+
+  buildFilters();
+  render();
+})();
+</script>
+</body>
+</html>
